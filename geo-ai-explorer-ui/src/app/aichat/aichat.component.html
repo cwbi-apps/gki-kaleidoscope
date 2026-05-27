@@ -118,7 +118,10 @@
 
               <div class="action" *ngIf="msg.mappable">
                 <br />
-                <p-button (onClick)="mapIt(msg)">View details</p-button>
+                <p-button (onClick)="mapIt(msg)">
+                  <fa-icon [icon]="mapIcon"></fa-icon>
+                  Map It
+                </p-button>
               </div>
 
               <div class="action ambiguous" *ngIf="msg.ambiguous && last">

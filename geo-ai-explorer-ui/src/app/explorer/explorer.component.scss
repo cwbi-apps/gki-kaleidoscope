@@ -93,8 +93,12 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
   position: relative;
   background: var(--surface-card, #fff);
   border-left: 1px solid var(--surface-border, #dfe3ea);
-  overflow: auto;
+  // overflow: visible;
 }
+
+// results-table {
+//   overflow: visible;
+// }
 
 .chat-panel {
   background: var(--surface-card, #fff);

@@ -14,7 +14,8 @@ import {
   faUser,
   faPlus,
   faXmark,
-  faPencil
+  faPencil,
+  faMapLocation
 } from '@fortawesome/free-solid-svg-icons';
 
 import { ChatService } from '../service/chat-service.service';
@@ -67,6 +68,7 @@ export class AichatComponent {
 
   icon = faEraser;
   edit = faPencil;
+  mapIcon = faMapLocation;
   public newConversationIcon = faPlus;
   public closeConversationIcon = faXmark;
 
