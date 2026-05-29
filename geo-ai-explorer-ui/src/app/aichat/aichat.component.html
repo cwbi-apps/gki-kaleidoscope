@@ -196,10 +196,10 @@
             </ng-container>
 
             <ng-container *ngIf="!msg.loading">
-              <ng-container *ngIf="hasLocationSections(msg); else markdownMessage">
+              <ng-container *ngIf="msg.hasLocationSections; else markdownMessage">
                 <span class="location-content">
-                  <ng-container *ngFor="let section of msg.sections">
-                    <span *ngIf="section.type === 0">{{ renderLocationText(section.text) }}</span>
+                  <ng-container *ngFor="let section of msg.renderedSections">
+                    <span *ngIf="section.type === 0">{{ section.renderedText }}</span>
                     <a
                       *ngIf="section.type === 1"
                       class="clickable"
@@ -211,11 +211,11 @@
               </ng-container>
 
               <ng-template #markdownMessage>
-                <ng-container *ngFor="let section of msg.sections">
+                <ng-container *ngFor="let section of msg.renderedSections">
                   <span
                     *ngIf="section.type === 0"
                     class="markdown-content"
-                    [innerHTML]="msg.sender === 'system' ? renderMarkdown(section.text) : section.text">
+                    [innerHTML]="section.renderedHtml ?? section.renderedText">
                   </span>
 
                   <a
@@ -234,7 +234,7 @@
                 </p-button>
 
                 <p-button
-                  *ngIf="getSavedQueryIndex(msg) as savedIndex"
+                  *ngIf="msg.savedQueryIndex as savedIndex"
                   severity="secondary"
                   (onClick)="saveOrScrollQuery($event, msg)">
                   <fa-icon [icon]="saveQueryIcon"></fa-icon>

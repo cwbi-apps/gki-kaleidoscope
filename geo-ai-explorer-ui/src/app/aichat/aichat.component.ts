@@ -22,7 +22,7 @@ import {
 
 import { ChatService } from '../service/chat-service.service';
 import { initialState, parseText } from '../state/chat.state';
-import { ChatMessage } from '../models/chat.model';
+import { ChatMessage, MessageSection } from '../models/chat.model';
 import { ErrorService } from '../service/error-service.service';
 import {
   ExplorerActions,
@@ -34,7 +34,6 @@ import { ExplorerService } from '../service/explorer.service';
 import { GeoObject } from '../models/geoobject.model';
 import { CachedExplorerPages, ExplorerSessionStateService } from '../service/explorer-session-state.service';
 
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
 
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -48,6 +47,17 @@ interface ChatConversation {
   draft: string;
   loading: boolean;
   createdAt: number;
+}
+
+interface RenderedMessageSection extends MessageSection {
+  renderedText: string;
+  renderedHtml?: string;
+}
+
+interface RenderedChatMessage extends ChatMessage {
+  hasLocationSections: boolean;
+  renderedSections: RenderedMessageSection[];
+  savedQueryIndex: number | null;
 }
 
 @Component({
@@ -91,9 +101,11 @@ export class AichatComponent {
   workflowData$: Observable<any> = this.store.select(getWorkflowData);
   savedQueries$: Observable<CachedExplorerPages[]>;
   onWorkflowStepChange: Subscription;
+  onSavedQueriesChange: Subscription;
 
   public conversations: ChatConversation[] = [];
   public activeConversationId: string | null = null;
+  public renderedMessages: RenderedChatMessage[] = [];
 
   public mapLoading: boolean = false;
   public minimized: boolean = false;
@@ -107,6 +119,8 @@ export class AichatComponent {
   public editingSavedQueryTitle = '';
   public sidebarWidthPx = this.loadSidebarWidth();
   private resizingSidebar = false;
+  private markdownCache = new Map<string, string>();
+  private savedQueryIndexById = new Map<string, number>();
 
   @ViewChild('chatContainer') chatContainer?: ElementRef<HTMLElement>;
 
@@ -115,12 +129,15 @@ export class AichatComponent {
     private explorerService: ExplorerService,
     private errorService: ErrorService,
     private messageService: MessageService,
-    private sanitizer: DomSanitizer,
     private confirmationService: ConfirmationService,
     private explorerSessionState: ExplorerSessionStateService
   ) {
     this.savedQueries$ = this.explorerSessionState.savedQueries$;
     this.activeSidebarTab = this.loadActiveSidebarTab();
+    this.onSavedQueriesChange = this.savedQueries$.subscribe(savedQueries => {
+      this.savedQueryIndexById = new Map(savedQueries.map((query, index) => [query.id, index + 1]));
+      this.refreshRenderedMessages();
+    });
 
     this.loadConversations();
 
@@ -145,6 +162,7 @@ export class AichatComponent {
 
   ngOnDestroy(): void {
     this.onWorkflowStepChange.unsubscribe();
+    this.onSavedQueriesChange.unsubscribe();
   }
 
   startSidebarResize(event: MouseEvent): void {
@@ -187,11 +205,6 @@ export class AichatComponent {
 
   get activeConversation(): ChatConversation | undefined {
     return this.conversations.find(c => c.id === this.activeConversationId);
-  }
-
-  get renderedMessages(): ChatMessage[] {
-    const conversation = this.activeConversation;
-    return conversation ? [...conversation.messages].reverse() : [];
   }
 
   get message(): string {
@@ -267,6 +280,7 @@ export class AichatComponent {
         ? rawActiveConversationId
         : this.conversations[0].id;
 
+      this.refreshRenderedMessages();
       this.saveConversations();
     } catch (error) {
       console.warn('Failed to load AI chat conversations from localStorage', error);
@@ -284,19 +298,56 @@ export class AichatComponent {
     this.newDefaultConversation();
   }
 
-  renderMarkdown(text: string | undefined | null): string {
-    return marked.parse(text ?? '', {
+  private renderMarkdown(text: string | undefined | null): string {
+    const source = text ?? '';
+    const cached = this.markdownCache.get(source);
+
+    if (cached != null) {
+      return cached;
+    }
+
+    const rendered = marked.parse(source, {
       breaks: true,
       gfm: true
     }) as string;
+
+    this.markdownCache.set(source, rendered);
+
+    return rendered;
   }
 
-  hasLocationSections(message: ChatMessage): boolean {
-    return message.sections?.some(section => section.type === 1) ?? false;
-  }
-
-  renderLocationText(text: string | undefined | null): string {
+  private renderLocationText(text: string | undefined | null): string {
     return (text ?? '').replace(/(^|\n)[ \t]+(?=-\s)/g, '$1');
+  }
+
+  private refreshRenderedMessages(): void {
+    const conversation = this.activeConversation;
+
+    this.renderedMessages = conversation
+      ? [...conversation.messages].reverse().map(message => this.buildRenderedMessage(conversation, message))
+      : [];
+  }
+
+  private buildRenderedMessage(conversation: ChatConversation, message: ChatMessage): RenderedChatMessage {
+    const sections = message.sections ?? [];
+    const hasLocationSections = sections.some(section => section.type === 1);
+
+    return {
+      ...message,
+      hasLocationSections,
+      renderedSections: sections.map(section => ({
+        ...section,
+        renderedText: hasLocationSections && section.type === 0
+          ? this.renderLocationText(section.text)
+          : section.text,
+        renderedHtml: !hasLocationSections && message.sender === 'system' && section.type === 0
+          ? this.renderMarkdown(section.text)
+          : undefined
+      })),
+      savedQueryIndex: message.mappable
+        ? this.getSavedQueryIndexForConversation(conversation, message)
+        : null
+    };
   }
 
   newConversation(save = true): void {
@@ -314,6 +365,7 @@ export class AichatComponent {
 
     this.conversations.unshift(conversation);
     this.activeConversationId = id;
+    this.refreshRenderedMessages();
 
     if (save) {
       this.saveConversations();
@@ -335,6 +387,7 @@ export class AichatComponent {
 
     this.conversations.unshift(conversation);
     this.activeConversationId = id;
+    this.refreshRenderedMessages();
 
     if (save) {
       this.saveConversations();
@@ -344,6 +397,7 @@ export class AichatComponent {
   selectConversation(id: string): void {
     this.activeConversationId = id;
     this.activeSidebarTab = 'chat';
+    this.refreshRenderedMessages();
     this.saveActiveSidebarTab();
     this.saveConversations();
   }
@@ -398,6 +452,7 @@ export class AichatComponent {
       this.newConversation(false);
     }
 
+    this.refreshRenderedMessages();
     this.saveConversations();
   }
 
@@ -535,6 +590,7 @@ export class AichatComponent {
 
     conversation.messages.push(system);
     conversation.loading = true;
+    this.refreshRenderedMessages();
 
     this.saveConversations();
 
@@ -564,6 +620,7 @@ export class AichatComponent {
             location: response.location
           });
 
+          this.refreshRenderedMessages();
           this.saveConversations();
         }
       })
@@ -587,6 +644,7 @@ export class AichatComponent {
             purpose: 'info'
           };
 
+          this.refreshRenderedMessages();
           this.saveConversations();
         }
       })
@@ -595,6 +653,7 @@ export class AichatComponent {
 
         if (targetConversation) {
           targetConversation.loading = false;
+          this.refreshRenderedMessages();
           this.saveConversations();
         }
       });
@@ -636,6 +695,7 @@ export class AichatComponent {
     }
 
     this.activeConversationId = target.conversation.id;
+    this.refreshRenderedMessages();
     this.saveConversations();
     this.scrollToChatMessage(target.message.id);
   }
@@ -709,8 +769,16 @@ export class AichatComponent {
       : null;
   }
 
-  getSavedQueryIndex(message: ChatMessage): number | null {
-    return this.explorerSessionState.getSavedQueryIndex(this.getMessageQueryId(message));
+  private getSavedQueryIndexForConversation(conversation: ChatConversation, message: ChatMessage): number | null {
+    const history = this.getMappableHistoryForConversation(conversation, message);
+
+    if (!history) {
+      return null;
+    }
+
+    const queryId = this.explorerSessionState.getOrCreateLocationsRequestId(history, 0, 100);
+
+    return this.savedQueryIndexById.get(queryId) ?? null;
   }
 
   saveOrScrollQuery(event: Event, message: ChatMessage): void {
@@ -948,6 +1016,7 @@ export class AichatComponent {
       conversation.loading = false;
     }
 
+    this.refreshRenderedMessages();
     this.saveConversations();
   }
 
