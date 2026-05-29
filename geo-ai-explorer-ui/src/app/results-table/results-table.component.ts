@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostBinding, inject, OnDestroy, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, HostBinding, inject, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { LetDirective } from '@ngrx/component';
 import { CommonModule } from '@angular/common';
 
@@ -82,7 +82,7 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
     activePageDisplayKey: string = '';
     pinnedPageDisplayKeys: string[] = [];
 
-    public collapsed = false;
+    private _collapsed = false;
 
     private readonly expandedDefaultHeightPx = 360;
     private readonly collapsedHeightPx = 0;
@@ -110,6 +110,15 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
     @HostBinding('class.results-panel-resizing')
     get hostResizingClass(): boolean {
         return this.resizing;
+    }
+
+    @Input()
+    set collapsed(value: boolean) {
+        this._collapsed = value;
+    }
+
+    get collapsed(): boolean {
+        return this._collapsed;
     }
 
     constructor(
@@ -165,7 +174,11 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
     }
 
     onClick(obj: GeoObject): void {
-        this.store.dispatch(ExplorerActions.inspectObject({ object: obj, zoomMap: true }));
+        this.store.dispatch(ExplorerActions.appendWorkflowStep({
+            step: WorkflowStep.InspectObject,
+            data: obj,
+            zoomMap: true
+        }));
     }
 
     onRowHover(obj: GeoObject): void {

@@ -22,7 +22,7 @@
         class="sidebar-tab"
         [class.active]="activeSidebarTab === 'queries'"
         (click)="setActiveSidebarTab('queries')">
-        Query History
+        Saved Queries
       </button>
     </div>
 
@@ -87,16 +87,31 @@
     </ng-container>
 
     <ng-container *ngIf="activeSidebarTab === 'queries'">
-      <div class="query-tabs" *ngIf="queryHistory$ | async as queryHistory">
+      <div class="query-tabs" *ngIf="savedQueries$ | async as savedQueries">
         <button
           type="button"
-          *ngFor="let query of queryHistory"
+          *ngFor="let query of savedQueries; let queryIndex = index"
           class="query-tab"
-          (click)="viewCachedQuery(query)">
+          [id]="savedQueryElementId(query.id)"
+          [class.highlight]="highlightSavedQueryId === query.id"
+          (click)="openSavedQueryChat(query)">
 
-          <span class="query-title">
+          <span
+            class="query-title"
+            *ngIf="editingSavedQueryId !== query.id">
+            #{{ queryIndex + 1 }}
             {{ query.title }}
           </span>
+
+          <input
+            *ngIf="editingSavedQueryId === query.id"
+            class="query-title-input"
+            type="text"
+            [(ngModel)]="editingSavedQueryTitle"
+            (click)="$event.stopPropagation()"
+            (keydown.enter)="saveSavedQueryTitle($event, query)"
+            (keydown.escape)="cancelSavedQueryTitleEdit($event)"
+            autocomplete="off" />
 
           <span class="query-meta">
             {{ formatQueryMeta(query) }}
@@ -116,10 +131,9 @@
 
             <span
               class="query-action"
-              [class.saved]="query.saved"
-              [title]="query.saved ? 'Unsave query' : 'Save query'"
-              (click)="saveCachedQuery($event, query)">
-              <fa-icon [icon]="saveQueryIcon"></fa-icon>
+              title="Rename query"
+              (click)="startEditingSavedQueryTitle($event, query)">
+              <fa-icon [icon]="edit"></fa-icon>
             </span>
 
             <span
@@ -131,22 +145,24 @@
           </span>
         </button>
 
-        <div class="empty-query-history" *ngIf="queryHistory.length === 0">
-          No cached queries yet.
+        <div class="empty-query-history" *ngIf="savedQueries.length === 0">
+          No saved queries yet.
         </div>
       </div>
     </ng-container>
   </aside>
 
-  <main class="chat-main">
+  <main class="chat-main" (click)="cancelSavedQueryTitleEdit()">
     <div *ngIf="!minimized" class="messages">
       <ng-container>
         <div
           *ngFor="let msg of renderedMessages; let last = first"
           class="message"
+          [id]="chatMessageElementId(msg.id)"
           [ngClass]="{
             'user': msg.sender === 'user',
-            'system': msg.sender === 'system'
+            'system': msg.sender === 'system',
+            'highlight': highlightChatMessageId === msg.id
           }">
 
           <div class="sender-icon">
@@ -200,11 +216,18 @@
                 </ng-container>
               </ng-template>
 
-              <div class="action" *ngIf="msg.mappable">
-                <br />
+              <div class="action mappable-actions" *ngIf="msg.mappable">
                 <p-button (onClick)="mapIt(msg)">
                   <fa-icon [icon]="mapIcon"></fa-icon>
                   Map It
+                </p-button>
+
+                <p-button
+                  *ngIf="getSavedQueryIndex(msg) as savedIndex"
+                  severity="secondary"
+                  (onClick)="saveOrScrollQuery($event, msg)">
+                  <fa-icon [icon]="saveQueryIcon"></fa-icon>
+                  <span>Saved Query #{{ savedIndex }}</span>
                 </p-button>
               </div>
 

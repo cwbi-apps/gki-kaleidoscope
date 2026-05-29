@@ -5,12 +5,44 @@
        'layout-map-results': workflowStep === WorkflowStep.MapAndResults,
        'layout-disambiguate': workflowStep === WorkflowStep.DisambiguateObject,
        'layout-min-chat': workflowStep === WorkflowStep.MinimizeChat,
-       'layout-inspect': workflowStep === WorkflowStep.InspectObject || workflowStep === WorkflowStep.ViewNeighbors,
-       'inspector-open': selectedObject != null && workflowStep !== WorkflowStep.DisambiguateObject
+       'layout-inspect': workflowStep === WorkflowStep.InspectObject || workflowStep === WorkflowStep.ViewNeighbors
      }"
      [style.--results-panel-height.px]="resultsPanelHeightPx">
 
   <p-toast position="top-center" key="explorer" />
+
+  <p-dialog
+    header="Save Query"
+    [(visible)]="saveQueryDialogVisible"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    appendTo="body"
+    styleClass="save-query-dialog">
+    <div class="save-query-form">
+      <label for="save-query-name">Name</label>
+      <input
+        id="save-query-name"
+        type="text"
+        [(ngModel)]="saveQueryName"
+        (keydown.enter)="saveCurrentQuery()"
+        autocomplete="off" />
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-button
+        severity="secondary"
+        label="Cancel"
+        (onClick)="saveQueryDialogVisible = false">
+      </p-button>
+
+      <p-button
+        label="Save"
+        [disabled]="!saveQueryName.trim()"
+        (onClick)="saveCurrentQuery()">
+      </p-button>
+    </ng-template>
+  </p-dialog>
 
   <div *ngIf="loading" class="spinner-overlay">
     <p-progress-spinner ariaLabel="loading" />
@@ -133,6 +165,17 @@
       <fa-icon [icon]="backIcon"></fa-icon>
       <label>Back</label>
     </p-button>
+
+    <p-button
+      *ngIf="selectedObject == null && canSaveCurrentQuery() && !currentSavedQueryIndex()"
+      class="map-save-query-button"
+      severity="secondary"
+      pTooltip="Save query"
+      (onClick)="openSaveQueryDialog()"
+    >
+      <fa-icon [icon]="saveQueryIcon"></fa-icon>
+      <label>Save Query</label>
+    </p-button>
   </section>
 
   <!-- Results / Disambiguation Body -->
@@ -141,6 +184,7 @@
              workflowStep === WorkflowStep.AiChatAndResults ||
              workflowStep === WorkflowStep.MapAndResults ||
              workflowStep === WorkflowStep.DisambiguateObject ||
+             (workflowStep === WorkflowStep.InspectObject && hasResults(pages)) ||
              workflowStep === WorkflowStep.MinimizeChat ||
              workflowStep === WorkflowStep.ViewNeighbors
            ">
@@ -165,6 +209,8 @@
     <ng-container>
       <results-table
         (resultsHeightChange)="onResultsHeightChange($event)"
+        (resultsCollapsedChange)="onResultsCollapsedChange($event)"
+        [collapsed]="resultsCollapsed"
       ></results-table>
     </ng-container>
   </section>

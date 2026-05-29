@@ -14,6 +14,7 @@ export interface CachedExplorerPages {
   id: string;
   createdAt: number;
   updatedAt: number;
+  accessedAt: number;
   pages: LocationPage[];
   source: CachedExplorerPagesSource;
   title: string;
@@ -26,10 +27,11 @@ export interface CachedExplorerPages {
 export class ExplorerSessionStateService {
   private readonly prefix = 'explorer.pages.';
   private readonly savedPrefix = 'explorer.savedPages.';
+  private readonly maxSessionCaches = 25;
 
-  private readonly queryHistorySubject = new BehaviorSubject<CachedExplorerPages[]>(this.listCachedPages());
+  private readonly savedQueriesSubject = new BehaviorSubject<CachedExplorerPages[]>(this.listSavedPages());
 
-  readonly queryHistory$ = this.queryHistorySubject.asObservable();
+  readonly savedQueries$ = this.savedQueriesSubject.asObservable();
 
   cachePages(pages: LocationPage[], source: CachedExplorerPagesSource = 'unknown', id: string = uuidv4(), title?: string): string {
     if (!this.hasResults(pages)) {
@@ -44,6 +46,7 @@ export class ExplorerSessionStateService {
       id,
       createdAt: existing?.createdAt ?? Date.now(),
       updatedAt: Date.now(),
+      accessedAt: Date.now(),
       pages,
       source: source === 'unknown'
         ? existing?.source ?? source
@@ -59,7 +62,8 @@ export class ExplorerSessionStateService {
         localStorage.setItem(this.savedStorageKey(id), JSON.stringify(cache));
       }
 
-      this.refreshQueryHistory();
+      this.pruneSessionCaches();
+      this.refreshSavedQueries();
     } catch (error) {
       console.warn('Failed to cache explorer pages in sessionStorage', error);
     }
@@ -85,6 +89,9 @@ export class ExplorerSessionStateService {
       if (!cache) {
         return null;
       }
+
+      cache.accessedAt = Date.now();
+      sessionStorage.setItem(this.storageKey(id), JSON.stringify(cache));
 
       return Array.isArray(cache.pages)
         ? cache.pages
@@ -144,25 +151,97 @@ export class ExplorerSessionStateService {
       .sort((a, b) => b.updatedAt - a.updatedAt);
   }
 
-  saveCachedPages(id: string): void {
+  listSavedPages(): CachedExplorerPages[] {
+    return this.collectCaches(localStorage, this.savedPrefix)
+      .map(cache => ({ ...cache, saved: true }))
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  getCachedPages(id: string): CachedExplorerPages | null {
+    const cache = this.getCache(id);
+
+    if (!cache) {
+      return null;
+    }
+
+    const touched = {
+      ...cache,
+      accessedAt: Date.now()
+    };
+
+    try {
+      sessionStorage.setItem(this.storageKey(id), JSON.stringify(touched));
+    } catch (error) {
+      console.warn('Failed to update cached explorer pages access time', error);
+    }
+
+    return touched;
+  }
+
+  getSavedQueryIndex(id: string | null | undefined): number | null {
+    if (!id) {
+      return null;
+    }
+
+    const index = this.listSavedPages().findIndex(cache => cache.id === id);
+
+    return index === -1
+      ? null
+      : index + 1;
+  }
+
+  saveCachedPages(id: string, title?: string): void {
     const cache = this.getCache(id);
 
     if (!cache) {
       return;
     }
 
+    const trimmedTitle = title?.trim();
     const savedCache: CachedExplorerPages = {
       ...cache,
       saved: true,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      title: trimmedTitle && trimmedTitle.length > 0
+        ? trimmedTitle
+        : cache.title
     };
 
     try {
       sessionStorage.setItem(this.storageKey(id), JSON.stringify(savedCache));
       localStorage.setItem(this.savedStorageKey(id), JSON.stringify(savedCache));
-      this.refreshQueryHistory();
+      this.refreshSavedQueries();
     } catch (error) {
       console.warn('Failed to save explorer pages cache', error);
+    }
+  }
+
+  renameSavedPages(id: string, title: string): void {
+    const trimmedTitle = title.trim();
+
+    if (!trimmedTitle) {
+      return;
+    }
+
+    const cache = this.getCache(id);
+
+    if (!cache) {
+      return;
+    }
+
+    const renamedCache: CachedExplorerPages = {
+      ...cache,
+      title: trimmedTitle,
+      saved: true,
+      updatedAt: Date.now()
+    };
+
+    try {
+      sessionStorage.setItem(this.storageKey(id), JSON.stringify(renamedCache));
+      localStorage.setItem(this.savedStorageKey(id), JSON.stringify(renamedCache));
+      this.refreshSavedQueries();
+    } catch (error) {
+      console.warn('Failed to rename saved explorer pages cache', error);
     }
   }
 
@@ -182,7 +261,7 @@ export class ExplorerSessionStateService {
     try {
       localStorage.removeItem(this.savedStorageKey(id));
       sessionStorage.setItem(this.storageKey(id), JSON.stringify(unsavedCache));
-      this.refreshQueryHistory();
+      this.refreshSavedQueries();
     } catch (error) {
       console.warn('Failed to unsave explorer pages cache', error);
     }
@@ -192,7 +271,7 @@ export class ExplorerSessionStateService {
     try {
       sessionStorage.removeItem(this.storageKey(id));
       localStorage.removeItem(this.savedStorageKey(id));
-      this.refreshQueryHistory();
+      this.refreshSavedQueries();
     } catch (error) {
       console.warn('Failed to delete explorer pages cache', error);
     }
@@ -274,6 +353,7 @@ export class ExplorerSessionStateService {
         ...cache,
         createdAt: cache.createdAt ?? Date.now(),
         updatedAt: cache.updatedAt ?? cache.createdAt ?? Date.now(),
+        accessedAt: cache.accessedAt ?? cache.updatedAt ?? cache.createdAt ?? Date.now(),
         title: cache.title ?? this.buildTitle(cache.pages, cache.source ?? 'unknown'),
         saved: cache.saved ?? false
       };
@@ -283,8 +363,26 @@ export class ExplorerSessionStateService {
     }
   }
 
-  private refreshQueryHistory(): void {
-    this.queryHistorySubject.next(this.listCachedPages());
+  private refreshSavedQueries(): void {
+    this.savedQueriesSubject.next(this.listSavedPages());
+  }
+
+  private pruneSessionCaches(): void {
+    const sessionCaches = this.collectCaches(sessionStorage, this.prefix);
+    const disposable = sessionCaches
+      .filter(cache => !cache.saved && !this.hasSavedCache(cache.id))
+      .sort((a, b) => a.accessedAt - b.accessedAt);
+
+    while (sessionCaches.length > this.maxSessionCaches && disposable.length > 0) {
+      const oldest = disposable.shift();
+
+      if (!oldest) {
+        break;
+      }
+
+      sessionStorage.removeItem(this.storageKey(oldest.id));
+      sessionCaches.splice(sessionCaches.findIndex(cache => cache.id === oldest.id), 1);
+    }
   }
 
   private storageKey(id: string): string {

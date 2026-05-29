@@ -349,7 +349,11 @@ export class GraphExplorerComponent implements OnDestroy {
     let selectedObject = this.gprGraph!.nodes.find(n => n.properties.uri === this.idToUri(node.id));
 
     if (selectedObject) {
-      this.store.dispatch(ExplorerActions.inspectObject({ object: selectedObject, zoomMap: true }));
+      this.store.dispatch(ExplorerActions.appendWorkflowStep({
+        step: WorkflowStep.InspectObject,
+        data: selectedObject,
+        zoomMap: true
+      }));
       this.renderGeoObjectAndNeighbors(selectedObject);
     }
   }

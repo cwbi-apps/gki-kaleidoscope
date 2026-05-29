@@ -86,7 +86,7 @@ export class AichatComponent {
 
   workflowStep$: Observable<WorkflowStep> = this.store.select(getWorkflowStep);
   workflowData$: Observable<any> = this.store.select(getWorkflowData);
-  queryHistory$: Observable<CachedExplorerPages[]>;
+  savedQueries$: Observable<CachedExplorerPages[]>;
   onWorkflowStepChange: Subscription;
 
   public conversations: ChatConversation[] = [];
@@ -98,6 +98,10 @@ export class AichatComponent {
   public editingConversationId: string | null = null;
   public editingConversationTitle = '';
   public activeSidebarTab: 'chat' | 'queries' = 'chat';
+  public highlightSavedQueryId: string | null = null;
+  public highlightChatMessageId: string | null = null;
+  public editingSavedQueryId: string | null = null;
+  public editingSavedQueryTitle = '';
 
   constructor(
     private chatService: ChatService,
@@ -108,7 +112,7 @@ export class AichatComponent {
     private confirmationService: ConfirmationService,
     private explorerSessionState: ExplorerSessionStateService
   ) {
-    this.queryHistory$ = this.explorerSessionState.queryHistory$;
+    this.savedQueries$ = this.explorerSessionState.savedQueries$;
     this.activeSidebarTab = this.loadActiveSidebarTab();
 
     this.loadConversations();
@@ -574,15 +578,54 @@ export class AichatComponent {
     }));
   }
 
-  saveCachedQuery(event: Event, query: CachedExplorerPages): void {
+  openSavedQueryChat(query: CachedExplorerPages): void {
+    if (this.editingSavedQueryId === query.id) {
+      return;
+    }
+
+    const target = this.findMappableMessageForQueryId(query.id);
+
+    if (!target) {
+      this.viewCachedQuery(query);
+      return;
+    }
+
+    this.activeConversationId = target.conversation.id;
+    this.saveConversations();
+    this.scrollToChatMessage(target.message.id);
+  }
+
+  startEditingSavedQueryTitle(event: Event, query: CachedExplorerPages): void {
     event.stopPropagation();
 
-    if (query.saved) {
-      this.explorerSessionState.unsaveCachedPages(query.id);
+    if (this.editingSavedQueryId === query.id) {
+      this.cancelSavedQueryTitleEdit();
+      return;
     }
-    else {
-      this.explorerSessionState.saveCachedPages(query.id);
+
+    this.editingSavedQueryId = query.id;
+    this.editingSavedQueryTitle = query.title;
+  }
+
+  saveSavedQueryTitle(event: Event, query: CachedExplorerPages): void {
+    event.stopPropagation();
+
+    const title = this.editingSavedQueryTitle.trim();
+
+    if (!title) {
+      return;
     }
+
+    this.explorerSessionState.renameSavedPages(query.id, title);
+    this.editingSavedQueryId = null;
+    this.editingSavedQueryTitle = '';
+  }
+
+  cancelSavedQueryTitleEdit(event?: Event): void {
+    event?.stopPropagation();
+
+    this.editingSavedQueryId = null;
+    this.editingSavedQueryTitle = '';
   }
 
   deleteCachedQuery(event: Event, query: CachedExplorerPages): void {
@@ -591,7 +634,7 @@ export class AichatComponent {
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
       header: 'Delete query?',
-      message: `Delete "${query.title}" from query history?`,
+      message: `Delete "${query.title}" from saved queries?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
@@ -613,6 +656,160 @@ export class AichatComponent {
     return `${total} result${total === 1 ? '' : 's'}`;
   }
 
+  getMessageQueryId(message: ChatMessage): string | null {
+    const history = this.getMappableHistory(message);
+
+    return history
+      ? this.explorerSessionState.getOrCreateLocationsRequestId(history, 0, 100)
+      : null;
+  }
+
+  getSavedQueryIndex(message: ChatMessage): number | null {
+    return this.explorerSessionState.getSavedQueryIndex(this.getMessageQueryId(message));
+  }
+
+  saveOrScrollQuery(event: Event, message: ChatMessage): void {
+    event.stopPropagation();
+
+    const queryId = this.getMessageQueryId(message);
+
+    if (!queryId) {
+      return;
+    }
+
+    const savedIndex = this.explorerSessionState.getSavedQueryIndex(queryId);
+
+    if (savedIndex != null) {
+      this.scrollToSavedQuery(queryId);
+      return;
+    }
+
+    const cached = this.explorerSessionState.getCachedPages(queryId);
+
+    if (cached) {
+      this.explorerSessionState.saveCachedPages(queryId);
+      this.scrollToSavedQuery(queryId);
+      return;
+    }
+
+    const history = this.getMappableHistory(message);
+
+    if (!history) {
+      return;
+    }
+
+    this.mapLoading = true;
+
+    this.chatService.getLocations(history, 0, 100)
+      .then(pages => {
+        if (!this.explorerSessionState.hasResults(pages)) {
+          this.messageService.add({
+            key: 'explorer',
+            severity: 'info',
+            summary: 'Info',
+            detail: 'The query did not return any results!',
+            sticky: true
+          });
+          return;
+        }
+
+        this.explorerSessionState.saveCachedPages(queryId);
+        this.scrollToSavedQuery(queryId);
+      })
+      .catch(error => this.errorService.handleError(error))
+      .finally(() => {
+        this.mapLoading = false;
+      });
+  }
+
+  scrollToSavedQuery(queryId: string): void {
+    this.activeSidebarTab = 'queries';
+    this.saveActiveSidebarTab();
+
+    requestAnimationFrame(() => {
+      const el = document.getElementById(this.savedQueryElementId(queryId));
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+      if (el) {
+        this.highlightSavedQueryId = queryId;
+        window.setTimeout(() => {
+          if (this.highlightSavedQueryId === queryId) {
+            this.highlightSavedQueryId = null;
+          }
+        }, 1400);
+      }
+    });
+  }
+
+  scrollToChatMessage(messageId: string): void {
+    requestAnimationFrame(() => {
+      const el = document.getElementById(this.chatMessageElementId(messageId));
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+      if (el) {
+        this.highlightChatMessageId = messageId;
+        window.setTimeout(() => {
+          if (this.highlightChatMessageId === messageId) {
+            this.highlightChatMessageId = null;
+          }
+        }, 1400);
+      }
+    });
+  }
+
+  savedQueryElementId(queryId: string): string {
+    return `saved-query-${queryId}`;
+  }
+
+  chatMessageElementId(messageId: string): string {
+    return `chat-message-${messageId}`;
+  }
+
+  private findMappableMessageForQueryId(queryId: string): { conversation: ChatConversation; message: ChatMessage } | null {
+    for (const conversation of this.conversations) {
+      const mappableMessages = conversation.messages.filter(message => message.mappable);
+
+      for (const message of mappableMessages) {
+        const history = this.getMappableHistoryForConversation(conversation, message);
+
+        if (!history) {
+          continue;
+        }
+
+        const messageQueryId = this.explorerSessionState.getOrCreateLocationsRequestId(history, 0, 100);
+
+        if (messageQueryId === queryId) {
+          return { conversation, message };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private getMappableHistory(message: ChatMessage): ChatMessage[] | null {
+    const conversation = this.activeConversation;
+
+    if (!conversation) {
+      return null;
+    }
+
+    return this.getMappableHistoryForConversation(conversation, message);
+  }
+
+  private getMappableHistoryForConversation(conversation: ChatConversation, message: ChatMessage): ChatMessage[] | null {
+
+    const index = conversation.messages.findIndex(m => m.id === message.id);
+
+    if (index === -1) {
+      return null;
+    }
+
+    return conversation.messages
+      .slice(0, index + 1)
+      .filter(m => m.purpose === 'standard');
+  }
+
   mapIt(message: ChatMessage): void {
     const conversation = this.activeConversation;
 
@@ -620,15 +817,11 @@ export class AichatComponent {
       return;
     }
 
-    const index = conversation.messages.findIndex(m => m.id === message.id);
+    const history = this.getMappableHistory(message);
 
-    if (index === -1) {
+    if (!history) {
       return;
     }
-
-    const history = conversation.messages
-      .slice(0, index + 1)
-      .filter(m => m.purpose === 'standard');
 
     this.mapLoading = true;
 

@@ -29,12 +29,13 @@ import { TabsModule } from 'primeng/tabs';
 import { debounce } from 'lodash';
 import { VectorLayer } from '../models/vector-layer.model';
 import { environment } from '../../environments/environment';
-import { faArrowLeft, faArrowRight, faDownLeftAndUpRightToCenter, faUpRightAndDownLeftFromCenter } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faArrowRight, faDownLeftAndUpRightToCenter, faFloppyDisk, faUpRightAndDownLeftFromCenter } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ButtonModule } from 'primeng/button';
 import { LocationPage } from '../models/chat.model';
 import { TooltipModule } from 'primeng/tooltip';
 import { ExplorerSessionStateService } from '../service/explorer-session-state.service';
+import { DialogModule } from 'primeng/dialog';
 
 export interface TypeLegend { [key: string]: { label: string, color: string, visible: boolean, included: boolean } }
 
@@ -55,7 +56,8 @@ export interface TypeLegend { [key: string]: { label: string, color: string, vis
         CheckboxModule,
         FontAwesomeModule,
         ButtonModule,
-        TooltipModule
+        TooltipModule,
+        DialogModule
     ],
     templateUrl: './explorer.component.html',
     styleUrl: './explorer.component.scss'
@@ -66,6 +68,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     public forwardIcon = faArrowRight;
     public minimizeIcon = faDownLeftAndUpRightToCenter;
     public upsizeIcon = faUpRightAndDownLeftFromCenter;
+    public saveQueryIcon = faFloppyDisk;
 
     public static GEO = "http://www.opengis.net/ont/geosparql#";
 
@@ -161,6 +164,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     public chatMinimized: boolean = false;
 
     public resultsPanelHeightPx = Math.round(window.innerHeight * 0.4);
+    public resultsCollapsed = false;
 
     public pages: LocationPage[] = [{
         locations: [],
@@ -172,6 +176,9 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }];
 
     private currentPageCacheId?: string;
+
+    public saveQueryDialogVisible = false;
+    public saveQueryName = '';
 
     private restoringFromUrl = false;
 
@@ -233,6 +240,14 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.workflowStep = step;
                 this.zoomMap = zoomMap;
                 this.chatMinimized = step === WorkflowStep.MinimizeChat;
+                if (step === WorkflowStep.InspectObject) {
+                    this.resultsCollapsed = true;
+                    this.resultsPanelHeightPx = 0;
+                }
+                else if (this.resultsCollapsed) {
+                    this.resultsCollapsed = false;
+                    this.resultsPanelHeightPx = Math.round(window.innerHeight * 0.4);
+                }
 
                 if (this.isMapWorkflowStep(step)) {
                     this.ensureMapInitialized();
@@ -300,7 +315,6 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
         if (!view) {
             this.currentPageCacheId = undefined;
-            this.store.dispatch(ExplorerActions.closeInspector());
             this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.FullScreenChat }));
             this.restoringFromUrl = false;
             return;
@@ -312,7 +326,6 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
         if (view === 'chat') {
             this.currentPageCacheId = undefined;
-            this.store.dispatch(ExplorerActions.closeInspector());
             this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.FullScreenChat }));
             this.restoringFromUrl = false;
             return;
@@ -388,13 +401,8 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 }
 
                 this.store.dispatch(ExplorerActions.setWorkflowStep({
-                    step: WorkflowStep.MapAndResults,
-                    data: pageCacheId ? { pageCacheId } : undefined,
-                    zoomMap: !cachedPages
-                }));
-
-                this.store.dispatch(ExplorerActions.inspectObject({
-                    object: geoObject,
+                    step: WorkflowStep.InspectObject,
+                    data: geoObject,
                     zoomMap: !cachedPages
                 }));
             })
@@ -410,8 +418,9 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     private restoreInspectedObject(uri: string, zoomMap: boolean): void {
         this.explorerService.getAttributes(uri, true, uri.startsWith(environment.basePrefix))
             .then(geoObject => {
-                this.store.dispatch(ExplorerActions.inspectObject({
-                    object: geoObject,
+                this.store.dispatch(ExplorerActions.appendWorkflowStep({
+                    step: WorkflowStep.InspectObject,
+                    data: geoObject,
                     zoomMap
                 }));
             })
@@ -459,7 +468,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         const inspect = this.selectedObject?.properties?.uri;
 
         if (step === WorkflowStep.MapAndResults) {
-            return { view: 'map', state: pageCacheId, inspect };
+            return { view: 'map', state: pageCacheId };
         }
 
         if (step === WorkflowStep.DisambiguateObject) {
@@ -467,7 +476,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         }
 
         if (step === WorkflowStep.MinimizeChat) {
-            return { view: 'min-chat', state: pageCacheId, inspect };
+            return { view: 'min-chat', state: pageCacheId };
         }
 
         if (step === WorkflowStep.InspectObject && data?.properties?.uri) {
@@ -485,14 +494,51 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         return JSON.stringify({ view, state: pageCacheId, inspect: inspectUri });
     }
 
-    private hasResults(pages: LocationPage[] | null | undefined): boolean {
+    hasResults(pages: LocationPage[] | null | undefined): boolean {
         return (pages ?? []).some(page => (page.locations?.length ?? 0) > 0 || page.count > 0);
+    }
+
+    canSaveCurrentQuery(): boolean {
+        return this.currentPageCacheId != null && this.hasResults(this.pages);
+    }
+
+    currentSavedQueryIndex(): number | null {
+        return this.explorerSessionState.getSavedQueryIndex(this.currentPageCacheId);
+    }
+
+    openSaveQueryDialog(): void {
+        if (!this.currentPageCacheId) {
+            return;
+        }
+
+        if (this.currentSavedQueryIndex() != null) {
+            return;
+        }
+
+        this.saveQueryName = this.explorerSessionState.getCachedPages(this.currentPageCacheId)?.title ?? '';
+        this.saveQueryDialogVisible = true;
+    }
+
+    saveCurrentQuery(): void {
+        if (!this.currentPageCacheId || !this.saveQueryName.trim()) {
+            return;
+        }
+
+        this.explorerSessionState.saveCachedPages(this.currentPageCacheId, this.saveQueryName);
+        this.saveQueryDialogVisible = false;
     }
 
     onResultsHeightChange(heightPx: number): void {
         this.resultsPanelHeightPx = heightPx;
 
         this.resizeMapAfterLayoutChange();
+        this.render();
+    }
+
+    onResultsCollapsedChange(collapsed: boolean): void {
+        this.resultsCollapsed = collapsed;
+        this.resizeMapAfterLayoutChange();
+        this.render();
     }
 
     private resizeMapAfterLayoutChange(): void {
@@ -582,10 +628,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             this.cancelDisambiguation();
         }
         else if (this.workflowStep === WorkflowStep.InspectObject) {
-            this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.FullScreenChat }));
-        }
-        else if (this.selectedObject != null) {
-            this.store.dispatch(ExplorerActions.closeInspector());
+            this.goBack();
         }
         else {
             this.goBack();
@@ -1123,14 +1166,22 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     allGeoObjects(): GeoObject[] {
+        if (this.workflowStep === WorkflowStep.InspectObject && this.resultsCollapsed) {
+            return this.uniqueGeoObjects(this.neighbors.concat(this.selectedObject ? [this.selectedObject] : []));
+        }
+
         let all = this.geoObjects.concat(this.neighbors);
 
         if (this.selectedObject)
             all.push(this.selectedObject);
 
+        return this.uniqueGeoObjects(all);
+    }
+
+    private uniqueGeoObjects(objects: GeoObject[]): GeoObject[] {
         // Enforce each GeoObject only occurs once
         const seen = new Set<string>();
-        return all.filter(obj => seen.has(obj.properties.uri) ? false : seen.add(obj.properties.uri));
+        return objects.filter(obj => seen.has(obj.properties.uri) ? false : seen.add(obj.properties.uri));
     }
 
     geoObjectsByType(): { [key: string]: GeoObject[] } {
@@ -1519,7 +1570,11 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                             .then(geoObject => {
                                 this.map!.setFeatureState({ source: layer.id, sourceLayer: layer.sourceLayer, id: feature.properties[layer.codeProperty] }, { selected: true });
 
-                                this.store.dispatch(ExplorerActions.inspectObject({ object: geoObject, zoomMap: false }));
+                                this.store.dispatch(ExplorerActions.appendWorkflowStep({
+                                    step: WorkflowStep.InspectObject,
+                                    data: geoObject,
+                                    zoomMap: false
+                                }));
                             })
                             .catch(error => this.errorService.handleError(error))
                     }
@@ -1532,7 +1587,11 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                     let selectedObject = this.allGeoObjects().find(n => n.properties.uri === uri);
 
                     if (selectedObject) {
-                        this.store.dispatch(ExplorerActions.inspectObject({ object: selectedObject, zoomMap: false }));
+                        this.store.dispatch(ExplorerActions.appendWorkflowStep({
+                            step: WorkflowStep.InspectObject,
+                            data: selectedObject,
+                            zoomMap: false
+                        }));
                     }
                 }
             } else {

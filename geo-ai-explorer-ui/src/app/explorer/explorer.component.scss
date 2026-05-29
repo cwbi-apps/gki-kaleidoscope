@@ -120,6 +120,51 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
   cursor: pointer;
 }
 
+.map-save-query-button {
+  position: absolute;
+  top: 4.25rem;
+  left: 1rem;
+  z-index: 25;
+  pointer-events: auto;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
+}
+
+.map-save-query-button label {
+  cursor: pointer;
+}
+
+::ng-deep .save-query-dialog {
+  width: min(28rem, calc(100vw - 2rem));
+}
+
+.save-query-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.save-query-form label {
+  color: #334155;
+  font-weight: 650;
+}
+
+.save-query-form input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.55rem 0.65rem;
+  color: #172033;
+  font: inherit;
+}
+
+.save-query-form input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+  outline: none;
+}
+
 .results-panel {
   position: relative;
   background: var(--surface-card, #fff);
@@ -177,23 +222,12 @@ results-table {
     "results";
 }
 
-.explorer-root.layout-map-results.inspector-open {
-  grid-template-columns: minmax(360px, 32vw) minmax(0, 1fr);
-  grid-template-areas:
-    "inspector map"
-    "inspector results";
-}
-
 .explorer-root.layout-map-results .map-panel {
   grid-area: map;
 }
 
 .explorer-root.layout-map-results .results-panel {
   grid-area: results;
-}
-
-.explorer-root.layout-map-results .inspector {
-  grid-area: inspector;
 }
 
 /* Minimized chat mode */
@@ -205,21 +239,12 @@ results-table {
   grid-template-areas: "map results";
 }
 
-.explorer-root.layout-min-chat.inspector-open {
-  grid-template-columns: minmax(360px, 28vw) minmax(0, 1fr) minmax(380px, 34vw);
-  grid-template-areas: "inspector map results";
-}
-
 .explorer-root.layout-min-chat .map-panel {
   grid-area: map;
 }
 
 .explorer-root.layout-min-chat .results-panel {
   grid-area: results;
-}
-
-.explorer-root.layout-min-chat .inspector {
-  grid-area: inspector;
 }
 
 .explorer-root.layout-min-chat .chat-panel {
@@ -239,8 +264,10 @@ results-table {
 .explorer-root.layout-inspect {
   display: grid;
   grid-template-columns: minmax(360px, 32vw) minmax(0, 1fr);
-  grid-template-rows: 1fr;
-  grid-template-areas: "inspector map";
+  grid-template-rows: minmax(0, 1fr) minmax(0, var(--results-panel-height, 0px));
+  grid-template-areas:
+    "inspector map"
+    "inspector results";
 
   height: 100%;
   min-height: 0;
@@ -256,7 +283,7 @@ results-table {
 }
 
 .explorer-root.layout-inspect .results-panel {
-  display: none;
+  grid-area: results;
 }
 
 /* Disambiguation mode:
@@ -384,19 +411,32 @@ results-table {
 }
 
 #graphExplorerContainer ::ng-deep .p-tabpanels {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
 #graphExplorerContainer ::ng-deep .p-tabpanel {
-  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
 }
 
-#graphExplorerContainer attribute-panel {
+#graphExplorerContainer ::ng-deep .p-tabpanel:not([data-p-active='true']) {
+  display: none;
+}
+
+#graphExplorerContainer ::ng-deep .p-tabpanel[data-p-active='true'] {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#graphExplorerContainer attribute-panel,
+#graphExplorerContainer graph-explorer {
   display: block;
+  flex: 1 1 0;
   height: 100%;
   min-height: 0;
 }
@@ -470,8 +510,7 @@ results-table {
       "results";
   }
 
-  .explorer-root.layout-map-results.inspector-open,
-  .explorer-root.layout-min-chat.inspector-open {
+  .explorer-root.layout-inspect {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(260px, 34vh) minmax(280px, 32vh) minmax(220px, 1fr);
     grid-template-areas:

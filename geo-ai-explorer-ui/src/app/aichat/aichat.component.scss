@@ -120,6 +120,14 @@
   background: #f0f0f0;
 }
 
+.query-tab.highlight {
+  border-color: #10b981;
+  background: #ecfdf5;
+  box-shadow:
+    0 0 0 2px rgba(16, 185, 129, 0.28),
+    0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
 .conversation-tab.active {
   background: #e0f2f1;
   border-color: #004d40;
@@ -153,6 +161,23 @@
   color: #172033;
   font-weight: 650;
   line-height: 1.2;
+}
+
+.query-title-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  padding: 0.35rem 0.45rem;
+  color: #172033;
+  font: inherit;
+  font-weight: 650;
+}
+
+.query-title-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+  outline: none;
 }
 
 .query-meta,
@@ -299,9 +324,24 @@
   justify-content: flex-start;
 }
 
+.message.highlight label {
+  box-shadow:
+    0 0 0 3px rgba(16, 185, 129, 0.28),
+    0 8px 22px rgba(15, 23, 42, 0.12);
+}
+
 .message .action {
   text-align: center;
   width: 100%;
+}
+
+.message .mappable-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .message fa-icon {
