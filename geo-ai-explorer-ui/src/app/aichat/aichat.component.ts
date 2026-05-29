@@ -15,7 +15,9 @@ import {
   faPlus,
   faXmark,
   faPencil,
-  faMapLocation
+  faMapLocation,
+  faFloppyDisk,
+  faTrash
 } from '@fortawesome/free-solid-svg-icons';
 
 import { ChatService } from '../service/chat-service.service';
@@ -30,6 +32,7 @@ import {
 } from '../state/explorer.state';
 import { ExplorerService } from '../service/explorer.service';
 import { GeoObject } from '../models/geoobject.model';
+import { CachedExplorerPages, ExplorerSessionStateService } from '../service/explorer-session-state.service';
 
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
@@ -65,12 +68,16 @@ interface ChatConversation {
 export class AichatComponent {
   private readonly STORAGE_KEY = 'aichat.conversations.v1';
   private readonly ACTIVE_CONVERSATION_STORAGE_KEY = 'aichat.activeConversationId.v1';
+  private readonly ACTIVE_SIDEBAR_TAB_STORAGE_KEY = 'aichat.activeSidebarTab.v1';
 
   icon = faEraser;
   edit = faPencil;
   mapIcon = faMapLocation;
   public newConversationIcon = faPlus;
   public closeConversationIcon = faXmark;
+  public saveQueryIcon = faFloppyDisk;
+  public deleteQueryIcon = faTrash;
+  public viewQueryIcon = faMapLocation;
 
   public messageUserIcon = faUser;
   public messageSenderIcon = faUpRightAndDownLeftFromCenter;
@@ -79,6 +86,7 @@ export class AichatComponent {
 
   workflowStep$: Observable<WorkflowStep> = this.store.select(getWorkflowStep);
   workflowData$: Observable<any> = this.store.select(getWorkflowData);
+  queryHistory$: Observable<CachedExplorerPages[]>;
   onWorkflowStepChange: Subscription;
 
   public conversations: ChatConversation[] = [];
@@ -89,6 +97,7 @@ export class AichatComponent {
 
   public editingConversationId: string | null = null;
   public editingConversationTitle = '';
+  public activeSidebarTab: 'chat' | 'queries' = 'chat';
 
   constructor(
     private chatService: ChatService,
@@ -96,8 +105,12 @@ export class AichatComponent {
     private errorService: ErrorService,
     private messageService: MessageService,
     private sanitizer: DomSanitizer,
-    private confirmationService: ConfirmationService
+    private confirmationService: ConfirmationService,
+    private explorerSessionState: ExplorerSessionStateService
   ) {
+    this.queryHistory$ = this.explorerSessionState.queryHistory$;
+    this.activeSidebarTab = this.loadActiveSidebarTab();
+
     this.loadConversations();
 
     this.onWorkflowStepChange = combineLatest([
@@ -184,7 +197,7 @@ export class AichatComponent {
         id: c.id ?? uuidv4(),
         title: c.title ?? 'New chat',
         sessionId: c.sessionId ?? uuidv4(),
-        messages: Array.isArray(c.messages) ? c.messages : [],
+        messages: Array.isArray(c.messages) ? c.messages.map(message => parseText(message)) : [],
         draft: c.draft ?? '',
         loading: false,
         createdAt: c.createdAt ?? Date.now()
@@ -227,6 +240,14 @@ export class AichatComponent {
       breaks: true,
       gfm: true
     }) as string;
+  }
+
+  hasLocationSections(message: ChatMessage): boolean {
+    return message.sections?.some(section => section.type === 1) ?? false;
+  }
+
+  renderLocationText(text: string | undefined | null): string {
+    return (text ?? '').replace(/(^|\n)[ \t]+(?=-\s)/g, '$1');
   }
 
   newConversation(save = true): void {
@@ -273,7 +294,24 @@ export class AichatComponent {
 
   selectConversation(id: string): void {
     this.activeConversationId = id;
+    this.activeSidebarTab = 'chat';
+    this.saveActiveSidebarTab();
     this.saveConversations();
+  }
+
+  setActiveSidebarTab(tab: 'chat' | 'queries'): void {
+    this.activeSidebarTab = tab;
+    this.saveActiveSidebarTab();
+  }
+
+  private loadActiveSidebarTab(): 'chat' | 'queries' {
+    return localStorage.getItem(this.ACTIVE_SIDEBAR_TAB_STORAGE_KEY) === 'queries'
+      ? 'queries'
+      : 'chat';
+  }
+
+  private saveActiveSidebarTab(): void {
+    localStorage.setItem(this.ACTIVE_SIDEBAR_TAB_STORAGE_KEY, this.activeSidebarTab);
   }
 
   deleteConversation(event: Event, id: string): void {
@@ -527,6 +565,54 @@ export class AichatComponent {
     this.newConversation();
   }
 
+  viewCachedQuery(query: CachedExplorerPages): void {
+    this.store.dispatch(ExplorerActions.showPagesOnMap({
+      pages: query.pages,
+      zoomMap: true,
+      step: WorkflowStep.MapAndResults,
+      data: { pageCacheId: query.id }
+    }));
+  }
+
+  saveCachedQuery(event: Event, query: CachedExplorerPages): void {
+    event.stopPropagation();
+
+    if (query.saved) {
+      this.explorerSessionState.unsaveCachedPages(query.id);
+    }
+    else {
+      this.explorerSessionState.saveCachedPages(query.id);
+    }
+  }
+
+  deleteCachedQuery(event: Event, query: CachedExplorerPages): void {
+    event.stopPropagation();
+
+    this.confirmationService.confirm({
+      target: event.currentTarget as EventTarget,
+      header: 'Delete query?',
+      message: `Delete "${query.title}" from query history?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-secondary p-button-text',
+      accept: () => {
+        this.explorerSessionState.deleteCachedPages(query.id);
+      }
+    });
+  }
+
+  formatQueryDate(query: CachedExplorerPages): string {
+    return new Date(query.updatedAt).toLocaleString();
+  }
+
+  formatQueryMeta(query: CachedExplorerPages): string {
+    const total = query.pages.reduce((sum, page) => sum + (page.count ?? page.locations?.length ?? 0), 0);
+
+    return `${total} result${total === 1 ? '' : 's'}`;
+  }
+
   mapIt(message: ChatMessage): void {
     const conversation = this.activeConversation;
 
@@ -565,11 +651,13 @@ export class AichatComponent {
           ? WorkflowStep.DisambiguateObject
           : WorkflowStep.MapAndResults;
 
+        const pageCacheId = this.explorerSessionState.getOrCreateLocationsRequestId(history, 0, 100);
+
         this.store.dispatch(ExplorerActions.showPagesOnMap({
           pages,
           zoomMap: true,
           step,
-          data: { pages, zoomMap: true }
+          data: { pageCacheId }
         }));
       })
       .catch(error => this.errorService.handleError(error))
@@ -583,12 +671,15 @@ export class AichatComponent {
 
     this.explorerService.fullTextLookup(message.location!)
       .then(page => {
+        const pageCacheId = this.explorerSessionState.getOrCreateFullTextLookupId(message.location!);
+        this.explorerSessionState.cachePages([page], 'full-text-disambiguation', pageCacheId, message.location);
+
         this.store.dispatch(ExplorerActions.setPages({
           pages: [page],
           zoomMap: true
         }));
 
-        this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.DisambiguateObject }));
+        this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.DisambiguateObject, data: { pageCacheId } }));
       })
       .catch(error => this.errorService.handleError(error))
       .finally(() => {
@@ -635,7 +726,11 @@ export class AichatComponent {
 
     this.explorerService.getAttributes(uri, true)
       .then(geoObject => {
-        this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.InspectObject, data: geoObject, zoomMap: true }));
+        this.store.dispatch(ExplorerActions.setWorkflowStep({
+          step: WorkflowStep.InspectObject,
+          data: geoObject,
+          zoomMap: true
+        }));
       })
       .catch(error => this.errorService.handleError(error))
       .finally(() => {

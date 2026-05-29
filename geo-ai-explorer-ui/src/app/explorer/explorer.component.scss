@@ -75,6 +75,24 @@
   flex: 0 0 auto;
 }
 
+.inspector-controls.has-floating-back {
+  min-height: 4.5rem;
+  padding-left: 8.75rem;
+}
+
+.inspector-back-button {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 25;
+  pointer-events: auto;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
+}
+
+.inspector-back-button label {
+  cursor: pointer;
+}
+
 p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
   height: 100%;
 }
@@ -89,16 +107,29 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
   min-height: 0;
 }
 
+.map-back-button {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 25;
+  pointer-events: auto;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
+}
+
+.map-back-button label {
+  cursor: pointer;
+}
+
 .results-panel {
   position: relative;
   background: var(--surface-card, #fff);
   border-left: 1px solid var(--surface-border, #dfe3ea);
-  // overflow: visible;
+  overflow: visible;
 }
 
-// results-table {
-//   overflow: visible;
-// }
+results-table {
+  overflow: visible;
+}
 
 .chat-panel {
   background: var(--surface-card, #fff);
@@ -140,10 +171,17 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
 .explorer-root.layout-map-results {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: minmax(0, 1fr) minmax(56px, var(--results-panel-height, 40vh));
+  grid-template-rows: minmax(0, 1fr) minmax(0, var(--results-panel-height, 40vh));
   grid-template-areas:
     "map"
     "results";
+}
+
+.explorer-root.layout-map-results.inspector-open {
+  grid-template-columns: minmax(360px, 32vw) minmax(0, 1fr);
+  grid-template-areas:
+    "inspector map"
+    "inspector results";
 }
 
 .explorer-root.layout-map-results .map-panel {
@@ -155,7 +193,7 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
 }
 
 .explorer-root.layout-map-results .inspector {
-  display: none;
+  grid-area: inspector;
 }
 
 /* Minimized chat mode */
@@ -167,12 +205,21 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
   grid-template-areas: "map results";
 }
 
+.explorer-root.layout-min-chat.inspector-open {
+  grid-template-columns: minmax(360px, 28vw) minmax(0, 1fr) minmax(380px, 34vw);
+  grid-template-areas: "inspector map results";
+}
+
 .explorer-root.layout-min-chat .map-panel {
   grid-area: map;
 }
 
 .explorer-root.layout-min-chat .results-panel {
   grid-area: results;
+}
+
+.explorer-root.layout-min-chat .inspector {
+  grid-area: inspector;
 }
 
 .explorer-root.layout-min-chat .chat-panel {
@@ -304,17 +351,53 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
   min-height: 0;
   padding: 1rem;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* PrimeNG tabs inside inspector */
 
 #graphExplorerContainer p-tabs {
-  display: block;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   min-height: 0;
 }
 
 #graphExplorerContainer p-tabpanels {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#graphExplorerContainer ::ng-deep .p-tabs,
+#graphExplorerContainer ::ng-deep .p-tabpanels,
+#graphExplorerContainer ::ng-deep .p-tabpanel {
+  min-height: 0;
+  height: 100%;
+}
+
+#graphExplorerContainer ::ng-deep .p-tabs {
+  display: flex;
+  flex-direction: column;
+}
+
+#graphExplorerContainer ::ng-deep .p-tabpanels {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#graphExplorerContainer ::ng-deep .p-tabpanel {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+#graphExplorerContainer attribute-panel {
   display: block;
+  height: 100%;
   min-height: 0;
 }
 
@@ -383,6 +466,16 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(280px, 48vh) minmax(260px, 1fr);
     grid-template-areas:
+      "map"
+      "results";
+  }
+
+  .explorer-root.layout-map-results.inspector-open,
+  .explorer-root.layout-min-chat.inspector-open {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(260px, 34vh) minmax(280px, 32vh) minmax(220px, 1fr);
+    grid-template-areas:
+      "inspector"
       "map"
       "results";
   }

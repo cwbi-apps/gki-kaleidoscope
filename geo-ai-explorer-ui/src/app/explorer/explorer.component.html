@@ -5,7 +5,8 @@
        'layout-map-results': workflowStep === WorkflowStep.MapAndResults,
        'layout-disambiguate': workflowStep === WorkflowStep.DisambiguateObject,
        'layout-min-chat': workflowStep === WorkflowStep.MinimizeChat,
-       'layout-inspect': workflowStep === WorkflowStep.InspectObject || workflowStep === WorkflowStep.ViewNeighbors
+       'layout-inspect': workflowStep === WorkflowStep.InspectObject || workflowStep === WorkflowStep.ViewNeighbors,
+       'inspector-open': selectedObject != null && workflowStep !== WorkflowStep.DisambiguateObject
      }"
      [style.--results-panel-height.px]="resultsPanelHeightPx">
 
@@ -26,16 +27,23 @@
     <aichat [class.small-ai-chat]="workflowStep === WorkflowStep.MinimizeChat"></aichat>
   </section>
 
-  <section class="inspector" *ngIf="(workflowStep === WorkflowStep.InspectObject || workflowStep === WorkflowStep.DisambiguateObject) && selectedObject">
-      <div class="horizontal-layout inspector-controls">
-          <p-button severity="secondary"
-                      pTooltip="Go Back"
-                      (onClick)="goBack()">
-              <fa-icon [icon]="backIcon"></fa-icon>
-              <label>Back</label>
-          </p-button>
+  <section class="inspector" *ngIf="selectedObject && workflowStep !== WorkflowStep.FullScreenChat">
+      <p-button
+        *ngIf="workflowStep !== WorkflowStep.DisambiguateObject"
+        class="inspector-back-button"
+        severity="secondary"
+        pTooltip="Go Back"
+        (onClick)="onMapBack()"
+      >
+        <fa-icon [icon]="backIcon"></fa-icon>
+        <label>Back</label>
+      </p-button>
 
+      <div
+        class="horizontal-layout inspector-controls"
+        [class.has-floating-back]="workflowStep !== WorkflowStep.DisambiguateObject">
           <ng-container *ngIf="(previousWorkflowStep$ | async) !== WorkflowStep.DisambiguateObject">
+            <div></div>
             <h2 class="inspector-title">
               {{ selectedObject.properties.label }}
             </h2>
@@ -107,13 +115,24 @@
   <section class="map-panel"
            *ngIf="
              workflowStep === WorkflowStep.MapAndResults ||
+             workflowStep === WorkflowStep.InspectObject ||
              workflowStep === WorkflowStep.DisambiguateObject ||
              workflowStep === WorkflowStep.MinimizeChat ||
-             workflowStep === WorkflowStep.InspectObject ||
              workflowStep === WorkflowStep.ViewNeighbors
            ">
 
     <div id="map"></div>
+
+    <p-button
+      *ngIf="selectedObject == null"
+      class="map-back-button"
+      severity="secondary"
+      pTooltip="Go Back"
+      (onClick)="onMapBack()"
+    >
+      <fa-icon [icon]="backIcon"></fa-icon>
+      <label>Back</label>
+    </p-button>
   </section>
 
   <!-- Results / Disambiguation Body -->
@@ -130,12 +149,7 @@
         class="horizontal-layout"
         *ngIf="workflowStep === WorkflowStep.DisambiguateObject">
 
-      <p-button severity="secondary"
-                pTooltip="Back to AI Chat"
-                (onClick)="cancelDisambiguation()">
-        <fa-icon [icon]="backIcon"></fa-icon>
-        <label>Cancel</label>
-      </p-button>
+      <div></div>
 
       <h2>Select An Object</h2>
 
@@ -158,8 +172,8 @@
   <!-- Legend -->
   <p-panel *ngIf="
              workflowStep === WorkflowStep.MapAndResults ||
-             workflowStep === WorkflowStep.MinimizeChat ||
              workflowStep === WorkflowStep.InspectObject ||
+             workflowStep === WorkflowStep.MinimizeChat ||
              workflowStep === WorkflowStep.ViewNeighbors
            "
            [toggleable]="true"

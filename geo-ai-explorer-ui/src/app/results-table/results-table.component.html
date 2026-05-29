@@ -4,6 +4,7 @@
     class="results-collapse-toggle"
     (click)="toggleCollapsed()"
     [title]="collapsed ? 'Expand results' : 'Collapse results'"
+    [attr.aria-label]="collapsed ? 'Expand results' : 'Collapse results'"
     [pTooltip]="collapsed ? 'Expand results' : 'Collapse results'"
   >
     <fa-icon [icon]="collapsed ? expandIcon : collapseIcon"></fa-icon>
@@ -25,15 +26,6 @@
         class="results-header-row"
         *ngIf="workflowStep !== WorkflowStep.DisambiguateObject"
       >
-        <p-button
-          severity="secondary"
-          pTooltip="Go Back"
-          (onClick)="goBack()"
-        >
-          <fa-icon [icon]="backIcon"></fa-icon>
-          <label style="cursor: pointer;">Back</label>
-        </p-button>
-
         <p-tabs
           *ngIf="!collapsed"
           [value]="activePageDisplayKey"
@@ -112,21 +104,18 @@
                     </td>
                   </tr>
                 </ng-template>
-
-                <ng-template #footer>
-                  <tr>
-                    <td [attr.colspan]="item.columns.length || 1">
-                      <p-paginator
-                        (onPageChange)="onPageChange($event, item.index)"
-                        [first]="item.page.offset"
-                        [rows]="item.page.limit"
-                        [totalRecords]="item.page.count"
-                      />
-                    </td>
-                  </tr>
-                </ng-template>
               </p-table>
             </div>
+
+            <p-paginator
+              styleClass="compact-paginator"
+              (onPageChange)="onPageChange($event, item.index)"
+              [first]="item.page.offset"
+              [rows]="item.page.limit"
+              [totalRecords]="item.page.count"
+              [showCurrentPageReport]="true"
+              currentPageReportTemplate="{first}-{last} of {totalRecords}"
+            />
           </section>
         </ng-container>
       </div>

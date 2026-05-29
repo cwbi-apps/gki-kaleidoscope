@@ -7,13 +7,17 @@ import { ChatMessage, LocationPage, ServerChatResponse } from '../models/chat.mo
 import { MockUtil } from '../mock-util';
 import { environment } from '../../environments/environment';
 import { GeoObject } from '../models/geoobject.model';
+import { ExplorerSessionStateService } from './explorer-session-state.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ChatService {
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private explorerSessionState: ExplorerSessionStateService
+  ) {
   }
 
 
@@ -50,12 +54,22 @@ export class ChatService {
   }
 
   getLocations(messages: ChatMessage[], offset: number, limit: number): Promise<LocationPage[]> {
+    const cacheId = this.explorerSessionState.getOrCreateLocationsRequestId(messages, offset, limit);
+    const cachedPages = this.explorerSessionState.getPages(cacheId);
+
+    if (cachedPages) {
+      return Promise.resolve(cachedPages);
+    }
+
     if (environment.mockRequests)
     {
       return new Promise<LocationPage[]>((resolve) => {
         setTimeout(() => {
           resolve([MockUtil.locations]);
         }, 500); // Simulating network delay
+      }).then(pages => {
+        this.explorerSessionState.cachePages(pages, 'chat-mapit', cacheId);
+        return pages;
       });
     }
     else
@@ -70,17 +84,32 @@ export class ChatService {
         offset
       }
 
-      return firstValueFrom(this.http.post<LocationPage[]>(environment.apiUrl + 'api/chat/get-locations', params));
+      return firstValueFrom(this.http.post<LocationPage[]>(environment.apiUrl + 'api/chat/get-locations', params))
+        .then(pages => {
+          this.explorerSessionState.cachePages(pages, 'chat-mapit', cacheId);
+          return pages;
+        });
     }
   }
 
   getPage(statement: string, type:string, offset: number, limit: number): Promise<LocationPage> {
+    const cacheId = this.explorerSessionState.getOrCreatePageRequestId(statement, type, offset, limit);
+    const cachedPages = this.explorerSessionState.getPages(cacheId);
+    const cachedPage = cachedPages?.[0];
+
+    if (cachedPage) {
+      return Promise.resolve(cachedPage);
+    }
+
     if (environment.mockRequests)
     {
       return new Promise<LocationPage>((resolve) => {
         setTimeout(() => {
           resolve(MockUtil.locations);
         }, 500); // Simulating network delay
+      }).then(page => {
+        this.explorerSessionState.cachePages([page], 'page-query', cacheId);
+        return page;
       });
     }
     else
@@ -93,7 +122,11 @@ export class ChatService {
         offset
       }
 
-      return firstValueFrom(this.http.post<LocationPage>(environment.apiUrl + 'api/chat/get-page', params));
+      return firstValueFrom(this.http.post<LocationPage>(environment.apiUrl + 'api/chat/get-page', params))
+        .then(page => {
+          this.explorerSessionState.cachePages([page], 'page-query', cacheId);
+          return page;
+        });
     }
   }
 

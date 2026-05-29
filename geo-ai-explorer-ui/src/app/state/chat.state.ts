@@ -44,14 +44,11 @@ export function parseText(m: ChatMessage): ChatMessage {
     const message = { ...m }
     message.sections = [];
 
-    const tokens = message.text
-        .replaceAll('\n', "<br/>")
-        .replaceAll('<br/><br/>', "<br/>")
-        .split('<location>')
+    const tokens = message.text.split('<location>')
 
     tokens.forEach(token => {
 
-        const pattern = /<label>(.*)<\/label><uri>(.*)<\/uri><\/location>(.*)/
+        const pattern = /<label>([\s\S]*?)<\/label><uri>([\s\S]*?)<\/uri><\/location>([\s\S]*)/
 
         if (pattern.test(token)) {
             const values = pattern.exec(token);
@@ -59,7 +56,6 @@ export function parseText(m: ChatMessage): ChatMessage {
             const uri: string = values?.at(2) as string;
             const post: string = values?.at(3) as string;
 
-            // Ensure that the response contains a real URI and wasn't generated with some other
             if (uri.startsWith(environment.basePrefix)) {
                 message.sections?.push({ type: 1, text: label, uri: uri })
             }

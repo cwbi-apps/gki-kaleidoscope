@@ -25,6 +25,8 @@ export const ExplorerActions = createActionGroup({
         'Append Workflow Step': props<{ step: WorkflowStep, data?: any, zoomMap?: boolean }>(),
         'Back Workflow Step': emptyProps(),
         'Clear Workflow History': emptyProps(),
+        'Inspect Object': props<{ object: GeoObject, zoomMap?: boolean }>(),
+        'Close Inspector': emptyProps(),
         'Show Pages On Map': props<{ pages: LocationPage[]; zoomMap: boolean; step: WorkflowStep.MapAndResults | WorkflowStep.DisambiguateObject; data?: any; }>(),
     },
 });
@@ -197,6 +199,23 @@ export const explorerReducer = createReducer(
         styles: styles
     })),
 
+    on(ExplorerActions.inspectObject, (state, { object, zoomMap }) => {
+        const styles = resolveMissingStyles(state.styles, [object]);
+
+        return {
+            ...state,
+            styles,
+            selectedObject: object,
+            zoomMap: zoomMap ?? state.zoomMap
+        };
+    }),
+
+    on(ExplorerActions.closeInspector, (state) => ({
+        ...state,
+        selectedObject: null,
+        neighbors: []
+    })),
+
     // Forcibly sets the workflow step, clearing all history
     on(ExplorerActions.setWorkflowStep, (state, { step, data, zoomMap }) => {
         let styles = state.styles;
@@ -209,7 +228,12 @@ export const explorerReducer = createReducer(
             zoomMap: zoomMap ?? state.zoomMap,
             workflowStep: step,
             workflowData: data,
-            workflowHistory: []
+            workflowHistory: [],
+            selectedObject: step === WorkflowStep.InspectObject && data
+                ? data
+                : step === WorkflowStep.FullScreenChat
+                    ? null
+                    : state.selectedObject
         };
     }),
 
@@ -231,7 +255,10 @@ export const explorerReducer = createReducer(
             zoomMap: zoomMap ?? state.zoomMap,
             workflowStep: step,
             workflowData: data,
-            workflowHistory: [...state.workflowHistory, current]
+            workflowHistory: [...state.workflowHistory, current],
+            selectedObject: step === WorkflowStep.InspectObject && data
+                ? data
+                : state.selectedObject
         };
     }),
 
@@ -253,7 +280,12 @@ export const explorerReducer = createReducer(
             zoomMap: previous.zoomMap ?? false,
             workflowStep: previous.step,
             workflowData: previous.data,
-            workflowHistory
+            workflowHistory,
+            selectedObject: previous.step === WorkflowStep.InspectObject && previous.data
+                ? previous.data
+                : previous.step === WorkflowStep.FullScreenChat
+                    ? null
+                    : state.selectedObject
         };
     }),
 
@@ -273,7 +305,8 @@ export const explorerReducer = createReducer(
             zoomMap,
             workflowStep: step,
             workflowData: data,
-            workflowHistory: []
+            workflowHistory: [],
+            selectedObject: null
         };
     }),
     
@@ -304,6 +337,10 @@ export const getStyles = createSelector(selector, (s) => {
 
 export const highlightedObject = createSelector(selector, (s) => {
     return s.highlightedObject;
+});
+
+export const getSelectedObject = createSelector(selector, (s) => {
+    return s.selectedObject;
 });
 
 export const getVectorLayers = createSelector(selector, (s) => {

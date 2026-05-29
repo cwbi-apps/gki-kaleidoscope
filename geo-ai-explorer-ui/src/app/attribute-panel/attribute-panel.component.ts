@@ -6,7 +6,7 @@ import { Store } from '@ngrx/store';
 import { GeoObject } from '../models/geoobject.model';
 import { Observable, Subscription } from 'rxjs';
 import { ExplorerService } from '../service/explorer.service';
-import { getWorkflowState, WorkflowState, WorkflowStep } from '../state/explorer.state';
+import { getSelectedObject } from '../state/explorer.state';
 import { ErrorService } from '../service/error-service.service';
 
 
@@ -23,9 +23,9 @@ export class AttributePanelComponent implements OnDestroy {
 
   private store = inject(Store);
 
-  workflowState$: Observable<WorkflowState> = this.store.select(getWorkflowState);
+  selectedObject$: Observable<GeoObject | null> = this.store.select(getSelectedObject);
 
-  onWorkflowStateChange: Subscription;
+  onSelectedObjectChange: Subscription;
 
   geoObject: GeoObject | null = null;
 
@@ -33,11 +33,7 @@ export class AttributePanelComponent implements OnDestroy {
     private explorerService: ExplorerService,
     private errorService: ErrorService
   ) {
-    this.onWorkflowStateChange = this.workflowState$.subscribe(state => {
-      const object = state.step === WorkflowStep.InspectObject
-        ? state.data as GeoObject
-        : null;
-
+    this.onSelectedObjectChange = this.selectedObject$.subscribe(object => {
       this.selectObject(object);
     });
   }
@@ -57,7 +53,7 @@ export class AttributePanelComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.onWorkflowStateChange.unsubscribe();
+    this.onSelectedObjectChange.unsubscribe();
   }
 
 

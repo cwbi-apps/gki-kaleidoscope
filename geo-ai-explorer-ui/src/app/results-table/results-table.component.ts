@@ -13,12 +13,10 @@ import { ChatService } from '../service/chat-service.service';
 import { LocationPage } from '../models/chat.model';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
-    faArrowLeft,
     faThumbtack,
     faChevronDown,
     faChevronUp
 } from '@fortawesome/free-solid-svg-icons';
-import { ButtonModule } from 'primeng/button';
 import { FormsModule } from '@angular/forms';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { TooltipModule } from 'primeng/tooltip';
@@ -42,7 +40,7 @@ interface PageDisplayItem {
 
 @Component({
     selector: 'results-table',
-    imports: [TableModule, PaginatorModule, LetDirective, CommonModule, FontAwesomeModule, ButtonModule, FormsModule, MultiSelectModule, TooltipModule, TabsModule],
+    imports: [TableModule, PaginatorModule, LetDirective, CommonModule, FontAwesomeModule, FormsModule, MultiSelectModule, TooltipModule, TabsModule],
     templateUrl: './results-table.component.html',
     styleUrl: './results-table.component.scss',
 })
@@ -56,7 +54,6 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
     @Output()
     resultsCollapsedChange = new EventEmitter<boolean>();
 
-    public backIcon = faArrowLeft;
     pinIcon = faThumbtack;
     public collapseIcon = faChevronDown;
     public expandIcon = faChevronUp;
@@ -88,7 +85,7 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
     public collapsed = false;
 
     private readonly expandedDefaultHeightPx = 360;
-    private readonly collapsedHeightPx = 56;
+    private readonly collapsedHeightPx = 0;
     private readonly minExpandedHeightPx = 220;
     private readonly viewportTopPaddingPx = 96;
 
@@ -156,10 +153,6 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
         this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.FullScreenChat }));
     }
 
-    goBack() {
-        this.store.dispatch(ExplorerActions.backWorkflowStep());
-    }
-
     calculateScrollHeight(): string {
         if (this.workflowStep == WorkflowStep.DisambiguateObject) {
             return "calc(100vh - 75px)"
@@ -172,7 +165,7 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
     }
 
     onClick(obj: GeoObject): void {
-        this.store.dispatch(ExplorerActions.appendWorkflowStep({ step: WorkflowStep.InspectObject, data: obj }));
+        this.store.dispatch(ExplorerActions.inspectObject({ object: obj, zoomMap: true }));
     }
 
     onRowHover(obj: GeoObject): void {

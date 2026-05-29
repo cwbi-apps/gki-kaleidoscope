@@ -8,65 +8,134 @@
   </div>
 
   <aside *ngIf="!minimized" class="conversation-sidebar">
-    <div class="conversation-sidebar-title">Chat History</div>
-
-    <div class="conversation-tabs">
+    <div class="sidebar-tabs" role="tablist" aria-label="AI chat sidebar">
       <button
         type="button"
-        *ngFor="let conversation of conversations"
-        class="conversation-tab"
-        [class.active]="conversation.id === activeConversationId"
-        (click)="selectConversation(conversation.id)">
+        class="sidebar-tab"
+        [class.active]="activeSidebarTab === 'chat'"
+        (click)="setActiveSidebarTab('chat')">
+        Chat History
+      </button>
 
-        <span
-          *ngIf="editingConversationId !== conversation.id"
-          class="conversation-title"
-          title="Double-click to rename"
-          (dblclick)="startEditingConversationTitle($event, conversation)">
-          {{ conversation.title }}
-        </span>
-
-        <input
-          *ngIf="editingConversationId === conversation.id"
-          class="conversation-title-input"
-          type="text"
-          [(ngModel)]="editingConversationTitle"
-          (click)="$event.stopPropagation()"
-          (keydown.enter)="saveConversationTitle($event)"
-          (keydown.escape)="cancelConversationTitleEdit($event)"
-          (blur)="saveConversationTitle($event)"
-          autofocus />
-
-        <span
-          class="conversation-edit"
-          *ngIf="editingConversationId !== conversation.id"
-          [title]="'Edit conversation name'"
-          (click)="startEditingConversationTitle($event, conversation)">
-          <fa-icon [icon]="edit"></fa-icon>
-        </span>
-
-        <span *ngIf="conversation.loading" class="conversation-loading">●</span>
-
-        <span
-          class="conversation-close"
-          *ngIf="conversations.length > 1 || editingConversationId === conversation.id"
-          [title]="editingConversationId === conversation.id ? 'Cancel rename' : 'Delete conversation'"
-          (click)="editingConversationId === conversation.id
-            ? cancelConversationTitleEdit($event)
-            : deleteConversation($event, conversation.id)">
-          <fa-icon [icon]="closeConversationIcon"></fa-icon>
-        </span>
+      <button
+        type="button"
+        class="sidebar-tab"
+        [class.active]="activeSidebarTab === 'queries'"
+        (click)="setActiveSidebarTab('queries')">
+        Query History
       </button>
     </div>
 
-    <p-button
-      styleClass="new-conversation-button"
-      severity="secondary"
-      pTooltip="New conversation"
-      (onClick)="newConversation()">
-      <fa-icon [icon]="newConversationIcon"></fa-icon>
-      <span>New chat</span>
-    </p-button>
+    <ng-container *ngIf="activeSidebarTab === 'chat'">
+      <div class="conversation-tabs">
+        <button
+          type="button"
+          *ngFor="let conversation of conversations"
+          class="conversation-tab"
+          [class.active]="conversation.id === activeConversationId"
+          (click)="selectConversation(conversation.id)">
+
+          <span
+            *ngIf="editingConversationId !== conversation.id"
+            class="conversation-title"
+            title="Double-click to rename"
+            (dblclick)="startEditingConversationTitle($event, conversation)">
+            {{ conversation.title }}
+          </span>
+
+          <input
+            *ngIf="editingConversationId === conversation.id"
+            class="conversation-title-input"
+            type="text"
+            [(ngModel)]="editingConversationTitle"
+            (click)="$event.stopPropagation()"
+            (keydown.enter)="saveConversationTitle($event)"
+            (keydown.escape)="cancelConversationTitleEdit($event)"
+            (blur)="saveConversationTitle($event)"
+            autofocus />
+
+          <span
+            class="conversation-edit"
+            *ngIf="editingConversationId !== conversation.id"
+            [title]="'Edit conversation name'"
+            (click)="startEditingConversationTitle($event, conversation)">
+            <fa-icon [icon]="edit"></fa-icon>
+          </span>
+
+          <span *ngIf="conversation.loading" class="conversation-loading">●</span>
+
+          <span
+            class="conversation-close"
+            *ngIf="conversations.length > 1 || editingConversationId === conversation.id"
+            [title]="editingConversationId === conversation.id ? 'Cancel rename' : 'Delete conversation'"
+            (click)="editingConversationId === conversation.id
+              ? cancelConversationTitleEdit($event)
+              : deleteConversation($event, conversation.id)">
+            <fa-icon [icon]="closeConversationIcon"></fa-icon>
+          </span>
+        </button>
+      </div>
+
+      <p-button
+        styleClass="new-conversation-button"
+        severity="secondary"
+        pTooltip="New conversation"
+        (onClick)="newConversation()">
+        <fa-icon [icon]="newConversationIcon"></fa-icon>
+        <span>New chat</span>
+      </p-button>
+    </ng-container>
+
+    <ng-container *ngIf="activeSidebarTab === 'queries'">
+      <div class="query-tabs" *ngIf="queryHistory$ | async as queryHistory">
+        <button
+          type="button"
+          *ngFor="let query of queryHistory"
+          class="query-tab"
+          (click)="viewCachedQuery(query)">
+
+          <span class="query-title">
+            {{ query.title }}
+          </span>
+
+          <span class="query-meta">
+            {{ formatQueryMeta(query) }}
+          </span>
+
+          <span class="query-date">
+            {{ formatQueryDate(query) }}
+          </span>
+
+          <span class="query-actions">
+            <span
+              class="query-action"
+              title="View query"
+              (click)="viewCachedQuery(query); $event.stopPropagation()">
+              <fa-icon [icon]="viewQueryIcon"></fa-icon>
+            </span>
+
+            <span
+              class="query-action"
+              [class.saved]="query.saved"
+              [title]="query.saved ? 'Unsave query' : 'Save query'"
+              (click)="saveCachedQuery($event, query)">
+              <fa-icon [icon]="saveQueryIcon"></fa-icon>
+            </span>
+
+            <span
+              class="query-action"
+              title="Delete query"
+              (click)="deleteCachedQuery($event, query)">
+              <fa-icon [icon]="deleteQueryIcon"></fa-icon>
+            </span>
+          </span>
+        </button>
+
+        <div class="empty-query-history" *ngIf="queryHistory.length === 0">
+          No cached queries yet.
+        </div>
+      </div>
+    </ng-container>
   </aside>
 
   <main class="chat-main">
@@ -100,21 +169,36 @@
             </ng-container>
 
             <ng-container *ngIf="!msg.loading">
-              <ng-container *ngFor="let section of msg.sections">
-                <span
-                  *ngIf="section.type === 0"
-                  class="markdown-content"
-                  [innerHTML]="msg.sender === 'system' ? renderMarkdown(section.text) : section.text">
+              <ng-container *ngIf="hasLocationSections(msg); else markdownMessage">
+                <span class="location-content">
+                  <ng-container *ngFor="let section of msg.sections">
+                    <span *ngIf="section.type === 0">{{ renderLocationText(section.text) }}</span>
+                    <a
+                      *ngIf="section.type === 1"
+                      class="clickable"
+                      (click)="select($event, section.uri!)">
+                      {{ section.text }}
+                    </a>
+                  </ng-container>
                 </span>
+              </ng-container>
 
-                <ng-container *ngIf="section.type === 1">
+              <ng-template #markdownMessage>
+                <ng-container *ngFor="let section of msg.sections">
+                  <span
+                    *ngIf="section.type === 0"
+                    class="markdown-content"
+                    [innerHTML]="msg.sender === 'system' ? renderMarkdown(section.text) : section.text">
+                  </span>
+
                   <a
+                    *ngIf="section.type === 1"
                     class="clickable"
                     (click)="select($event, section.uri!)">
                     {{ section.text }}
                   </a>
                 </ng-container>
-              </ng-container>
+              </ng-template>
 
               <div class="action" *ngIf="msg.mappable">
                 <br />
