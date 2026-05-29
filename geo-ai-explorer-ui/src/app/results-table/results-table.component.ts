@@ -10,7 +10,7 @@ import { Observable, Subscription, take } from 'rxjs';
 import { Store } from '@ngrx/store';
 import { ExplorerActions, getPages, getWorkflowStep, highlightedObject, WorkflowStep } from '../state/explorer.state';
 import { ChatService } from '../service/chat-service.service';
-import { LocationPage } from '../models/chat.model';
+import { LocationPage, TypeSummary } from '../models/chat.model';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
     faThumbtack,
@@ -36,6 +36,12 @@ interface PageDisplayItem {
     page: LocationPage;
     index: number;
     columns: PageDisplayColumn[];
+}
+
+interface PageDisplayOption {
+    label: string;
+    value: string;
+    count: number;
 }
 
 @Component({
@@ -74,7 +80,7 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
     public workflowStep: WorkflowStep = WorkflowStep.MapAndResults;
 
     private latestPages: LocationPage[] = [];
-    pageDisplayOptions: { label: string; value: string }[] = [];
+    pageDisplayOptions: PageDisplayOption[] = [];
     displayedPageItems: PageDisplayItem[] = [];
     
     maxPinnedPages = 3;
@@ -114,7 +120,12 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
 
     @Input()
     set collapsed(value: boolean) {
+        const wasCollapsed = this._collapsed;
         this._collapsed = value;
+
+        if (wasCollapsed && !value) {
+            this.ensureActiveTypeLoaded();
+        }
     }
 
     get collapsed(): boolean {
@@ -135,6 +146,10 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
         this.onPagesChange = this.pages$.subscribe(pages => {
             this.latestPages = pages ?? [];
             this.rebuildPageDisplayState();
+
+            if (!this.collapsed) {
+                this.ensureActiveTypeLoaded();
+            }
         });
     }
 
@@ -154,7 +169,7 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
         this.store.dispatch(ExplorerActions.setPages({ pages: [{ 
             locations: [],
             statement: "",
-            type: "",
+            type: null,
             limit: 100,
             offset: 0,
             count: 0
@@ -193,23 +208,17 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
         this.highlightedObjectUri = uri;
     }
 
-    private getPageDisplayLabel(page: LocationPage): string {
-        if (page.type == null || page.type.trim() === '') {
-            return 'Results';
-        }
-
-        return this.getTypeLabel(page.type);
-    }
-
     private rebuildPageDisplayState(): void {
-        const pageItems = this.getPageItems(this.latestPages)
+        const pageItems = this.getLoadedTypePageItems(this.latestPages)
             .filter(item => item.page.count > 0);
+        const availableTypes = this.getAvailableTypes(this.latestPages);
 
-        this.ensureValidActiveAndPinnedPages(pageItems);
+        this.ensureValidActiveAndPinnedPages(availableTypes);
 
-        this.pageDisplayOptions = pageItems.map(item => ({
-            label: this.getPageDisplayLabel(item.page),
-            value: this.getPageDisplayKey(item.page, item.index)
+        this.pageDisplayOptions = availableTypes.map(type => ({
+            label: this.getTypeLabel(type.type),
+            value: type.type,
+            count: type.count
         }));
 
         const displayKeys = [
@@ -228,20 +237,14 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
         this.pages$.pipe(take(1)).subscribe(pages => {
             const currentPage = pages[pageIndex];
 
-            if (!currentPage) {
+            if (!currentPage?.type) {
                 return;
             }
 
             this.chatService
                 .getPage(currentPage.statement, currentPage.type, state.first ?? 0, state.rows ?? currentPage.limit)
                 .then(nextPage => {
-                    const nextPages = [...pages];
-                    nextPages[pageIndex] = nextPage;
-
-                    this.store.dispatch(ExplorerActions.setPages({
-                    pages: nextPages,
-                    zoomMap: true
-                    }));
+                    this.updatePagesWithTypePage(pages, nextPage);
                 });
         });
     }
@@ -249,6 +252,7 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
     selectActivePage(key: string | number): void {
         this.activePageDisplayKey = String(key);
         this.rebuildPageDisplayState();
+        this.ensureTypeLoaded(this.activePageDisplayKey);
     }
 
     isPagePinned(key: string): boolean {
@@ -268,6 +272,7 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
 
         this.pinnedPageDisplayKeys = [...this.pinnedPageDisplayKeys, key];
         this.rebuildPageDisplayState();
+        this.ensureTypeLoaded(key);
     }
 
     trackByPageItem = (index: number, item: { page: LocationPage; index: number }): string | number => {
@@ -288,10 +293,91 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
         }));
     }
 
-    ensureValidActiveAndPinnedPages(pageItems: PageDisplayItem[]): void {
-        const validKeys = pageItems.map(item =>
-            this.getPageDisplayKey(item.page, item.index)
-        );
+    private getLoadedTypePageItems(pages: LocationPage[]): PageDisplayItem[] {
+        return pages
+            .map((page, index) => ({
+                page,
+                index,
+                columns: this.getColumnsForPage(page)
+            }))
+            .filter(item => item.page.type != null && item.page.type.trim() !== '');
+    }
+
+    private getCombinedPage(pages: LocationPage[]): LocationPage | undefined {
+        return pages.find(page => page.type == null || page.type.trim() === '');
+    }
+
+    private getAvailableTypes(pages: LocationPage[]): TypeSummary[] {
+        const combinedPage = this.getCombinedPage(pages);
+        const availableTypes = combinedPage?.availableTypes ?? [];
+
+        if (availableTypes.length > 0) {
+            return [...availableTypes].sort((a, b) => b.count - a.count);
+        }
+
+        return this.getLoadedTypePageItems(pages)
+            .map(item => ({ type: item.page.type!, count: item.page.count }))
+            .sort((a, b) => b.count - a.count);
+    }
+
+    private ensureActiveTypeLoaded(): void {
+        if (!this.activePageDisplayKey) {
+            return;
+        }
+
+        this.ensureTypeLoaded(this.activePageDisplayKey);
+    }
+
+    private ensureTypeLoaded(type: string): void {
+        if (!type) {
+            return;
+        }
+
+        this.pages$.pipe(take(1)).subscribe(pages => {
+            if (pages.some(page => page.type === type)) {
+                return;
+            }
+
+            const combinedPage = this.getCombinedPage(pages);
+
+            if (!combinedPage) {
+                return;
+            }
+
+            this.chatService
+                .getPage(combinedPage.statement, type, 0, combinedPage.limit)
+                .then(typePage => this.updatePagesWithTypePage(pages, typePage));
+        });
+    }
+
+    private updatePagesWithTypePage(pages: LocationPage[], typePage: LocationPage): void {
+        const combinedPage = this.getCombinedPage(pages);
+
+        if (!combinedPage) {
+            return;
+        }
+
+        const loadedTypePages = pages
+            .filter(page => page.type != null && page.type.trim() !== '' && page.type !== typePage.type)
+            .concat(typePage);
+        const excludedTypes = loadedTypePages
+            .map(page => page.type)
+            .filter((type): type is string => type != null && type.trim() !== '');
+
+        this.chatService
+            .getPage(combinedPage.statement, null, combinedPage.offset, combinedPage.limit, excludedTypes)
+            .then(nextCombinedPage => {
+                nextCombinedPage.availableTypes = combinedPage.availableTypes ?? nextCombinedPage.availableTypes;
+
+                this.store.dispatch(ExplorerActions.setPages({
+                    pages: [nextCombinedPage, ...loadedTypePages],
+                    zoomMap: true
+                }));
+            });
+    }
+
+    ensureValidActiveAndPinnedPages(availableTypes: TypeSummary[]): void {
+        const validKeys = availableTypes.map(type => type.type);
 
         if (!this.activePageDisplayKey || !validKeys.includes(this.activePageDisplayKey)) {
             this.activePageDisplayKey = validKeys[0] ?? '';

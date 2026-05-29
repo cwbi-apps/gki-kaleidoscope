@@ -11,15 +11,17 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LocationPage
 {
-  private String         statement;
+  private String            statement;
   
-  private String         type;
+  private String            type;
 
-  private List<Location> locations;
+  private List<Location>    locations;
 
-  private long           count  = 0;
+  private List<TypeSummary> availableTypes;
 
-  private long           offset = 0;
+  private long              count  = 0;
 
-  private int            limit  = 1000;
+  private long              offset = 0;
+
+  private int               limit  = 1000;
 }

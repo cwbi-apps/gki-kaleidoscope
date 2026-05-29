@@ -28,11 +28,17 @@ export interface ServerChatResponse {
   location?: string;
 }
 
+export interface TypeSummary {
+  type: string;
+  count: number;
+}
+
 export interface LocationPage {
   statement: string;
-  type: string,
+  type: string | null,
   locations: GeoObject[];
   limit: number;
   offset: number;
   count: number;
+  availableTypes?: TypeSummary[];
 }

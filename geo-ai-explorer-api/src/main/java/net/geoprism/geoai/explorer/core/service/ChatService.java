@@ -16,7 +16,7 @@
 package net.geoprism.geoai.explorer.core.service;
 
 import java.time.Duration;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -30,7 +30,6 @@ import net.geoprism.geoai.explorer.core.model.GenericRestException;
 import net.geoprism.geoai.explorer.core.model.History;
 import net.geoprism.geoai.explorer.core.model.LocationPage;
 import net.geoprism.geoai.explorer.core.model.Message;
-import net.geoprism.geoai.explorer.core.service.BedrockService.TypeAndQuery;
 
 @Service
 public class ChatService
@@ -87,19 +86,9 @@ public class ChatService
     try
     {
       return Failsafe.with(retryPolicy).get(() -> {
-        List<TypeAndQuery> queryPerType = this.bedrock.getLocationSparql(history);
-
-        List<LocationPage> pages = new ArrayList<LocationPage>();
-        
-        for (var tnq : queryPerType) {
-          // Execute the query
-          pages.add(this.getPage(
-              tnq.query(),
-              tnq.type(),
-              history.getOffset(),
-              history.getLimit()
-          ));
-        }
+        String statement = this.bedrock.getLocationSparql(history);
+        LocationPage page = this.getPage(statement, null, history.getOffset(), history.getLimit());
+        List<LocationPage> pages = Arrays.asList(page);
 
         if (pages.size() == 0 ||
             pages.stream().mapToInt(p -> p.getLocations().size()).sum() == 0)
@@ -144,15 +133,34 @@ public class ChatService
 
   public LocationPage getPage(String statement, String type, int offset, int limit)
   {
+    return this.getPage(statement, type, offset, limit, List.of());
+  }
+
+  public LocationPage getPage(String statement, String type, int offset, int limit, List<String> excludedTypes)
+  {
     try
     {
+      boolean combinedPage = type == null || type.isBlank();
+      String pageStatement = combinedPage
+          ? this.graph.buildExcludedTypesQuery(statement, excludedTypes)
+          : this.graph.buildTypeFilterQuery(statement, type);
+
       LocationPage page = new LocationPage();
-      page.setType(type);
-      page.setLocations(this.graph.query(statement, offset, limit));
-      page.setCount(this.graph.getCount(statement));
+      page.setType(combinedPage ? null : type);
+      page.setLocations(this.graph.query(pageStatement, offset, limit));
+      page.setCount(this.graph.getCount(pageStatement));
       page.setLimit(limit);
       page.setOffset(offset);
       page.setStatement(statement);
+
+      if (combinedPage)
+      {
+        page.setAvailableTypes(this.graph.getTypeCounts(statement));
+      }
+      else
+      {
+        this.graph.injectAttributes(page);
+      }
 
       return page;
     }

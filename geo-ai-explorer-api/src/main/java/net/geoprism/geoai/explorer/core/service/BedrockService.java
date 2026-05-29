@@ -1,7 +1,6 @@
 package net.geoprism.geoai.explorer.core.service;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -14,12 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.json.JsonReadFeature;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import net.geoprism.geoai.explorer.core.config.AppProperties;
 import net.geoprism.geoai.explorer.core.model.History;
@@ -40,8 +33,6 @@ public class BedrockService
 
   @Autowired
   private AppProperties properties;
-
-  private final ObjectMapper objectMapper = JsonMapper.builder().enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS).build();
 
   public Message prompt(String sessionId, String inputText) throws InterruptedException, ExecutionException, TimeoutException
   {
@@ -79,11 +70,7 @@ public class BedrockService
     return message;
   }
 
-  public record TypeAndQuery(String type, String query)
-  {
-  }
-
-  public List<TypeAndQuery> getLocationSparql(History history)
+  public String getLocationSparql(History history)
       throws InterruptedException, ExecutionException, TimeoutException
   {
     String text = history.toText();
@@ -100,7 +87,7 @@ public class BedrockService
     // No idea why bedrock is redacting the word 'sparl'? Could be because its a tool parameter I don't know.
     response = response.replaceAll("<REDACTED>", "sparql");
 
-    return parseTypeAndQueries(response);
+    return stripCodeFence(response);
   }
 
   private String invokeAgent(String agentId, String agentAliasId, String sessionId, String inputText)
@@ -144,42 +131,19 @@ public class BedrockService
     return content.toString();
   }
 
-  private List<TypeAndQuery> parseTypeAndQueries(String response)
+  private String stripCodeFence(String response)
   {
-//    String json = extractJsonArray(response);
+    String text = response.trim();
 
-    try
+    if (text.startsWith("```"))
     {
-      return objectMapper.readValue(response, new TypeReference<List<TypeAndQuery>>() {});
+      text = text.replaceFirst("^```(?:sparql|sql)?\\s*", "");
+      text = text.replaceFirst("\\s*```$", "");
+      text = text.trim();
     }
-    catch (JsonProcessingException e)
-    {
-      throw new IllegalStateException("Failed to parse Bedrock SPARQL response into List<TypeAndQuery>. Response was: " + response, e);
-    }
+
+    return text;
   }
-
-//  private String extractJsonArray(String response)
-//  {
-//    String text = response.trim();
-//
-//    // Handles ```json ... ``` or ``` ... ```
-//    if (text.startsWith("```"))
-//    {
-//      text = text.replaceFirst("^```(?:json)?\\s*", "");
-//      text = text.replaceFirst("\\s*```$", "");
-//      text = text.trim();
-//    }
-//
-//    int start = text.indexOf('[');
-//    int end = text.lastIndexOf(']');
-//
-//    if (start == -1 || end == -1 || end <= start)
-//    {
-//      throw new IllegalStateException("Bedrock response did not contain a JSON array. Response was: " + response);
-//    }
-//
-//    return text.substring(start, end + 1);
-//  }
 
   private BedrockAgentRuntimeAsyncClient getClient()
   {

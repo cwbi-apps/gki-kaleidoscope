@@ -463,6 +463,28 @@ results-table {
   cursor: grabbing;
 }
 
+.legend-layer-name {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.legend-layer-name:hover,
+.legend-layer-name:focus-visible {
+  color: var(--primary-color, #10b981);
+  text-decoration: underline;
+}
+
+.legend-layer-name:active {
+  transform: translateY(1px);
+}
+
 .square {
   width: 0.85rem;
   height: 0.85rem;

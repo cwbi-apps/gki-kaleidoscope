@@ -92,8 +92,8 @@ export class ChatService {
     }
   }
 
-  getPage(statement: string, type:string, offset: number, limit: number): Promise<LocationPage> {
-    const cacheId = this.explorerSessionState.getOrCreatePageRequestId(statement, type, offset, limit);
+  getPage(statement: string, type: string | null, offset: number, limit: number, excludedTypes: string[] = []): Promise<LocationPage> {
+    const cacheId = this.explorerSessionState.getOrCreatePageRequestId(statement, type, offset, limit, excludedTypes);
     const cachedPages = this.explorerSessionState.getPages(cacheId);
     const cachedPage = cachedPages?.[0];
 
@@ -119,7 +119,8 @@ export class ChatService {
         statement,
         type,
         limit,
-        offset
+        offset,
+        excludedTypes
       }
 
       return firstValueFrom(this.http.post<LocationPage>(environment.apiUrl + 'api/chat/get-page', params))

@@ -1000,7 +1000,7 @@ export class AichatComponent {
       pages: [{
         locations: [],
         statement: '',
-        type: '',
+        type: null,
         limit: 100,
         offset: 0,
         count: 0

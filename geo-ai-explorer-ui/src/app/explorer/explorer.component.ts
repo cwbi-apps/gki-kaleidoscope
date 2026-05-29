@@ -63,6 +63,8 @@ export interface TypeLegend { [key: string]: { label: string, color: string, vis
     styleUrl: './explorer.component.scss'
 })
 export class ExplorerComponent implements OnInit, OnDestroy {
+    @ViewChild('resultsTable') resultsTable?: ResultsTableComponent;
+
     public WorkflowStep = WorkflowStep;
     public backIcon = faArrowLeft;
     public forwardIcon = faArrowRight;
@@ -169,7 +171,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     public pages: LocationPage[] = [{
         locations: [],
         statement: "",
-        type: "",
+        type: null,
         limit: 100,
         offset: 0,
         count: 0
@@ -241,6 +243,10 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.zoomMap = zoomMap;
                 this.chatMinimized = step === WorkflowStep.MinimizeChat;
                 if (step === WorkflowStep.InspectObject) {
+                    this.resultsCollapsed = true;
+                    this.resultsPanelHeightPx = 0;
+                }
+                else if (step === WorkflowStep.MapAndResults) {
                     this.resultsCollapsed = true;
                     this.resultsPanelHeightPx = 0;
                 }
@@ -541,6 +547,15 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         this.render();
     }
 
+    openResultsForType(type: string, event?: Event): void {
+        event?.stopPropagation();
+
+        this.resultsTable?.selectActivePage(type);
+        this.resultsCollapsed = false;
+        this.resizeMapAfterLayoutChange();
+        this.render();
+    }
+
     private resizeMapAfterLayoutChange(): void {
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
@@ -610,7 +625,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         this.store.dispatch(ExplorerActions.setPages({ pages: [{ 
             locations: [],
             statement: "",
-            type: "",
+            type: null,
             limit: 100,
             offset: 0,
             count: 0
@@ -639,7 +654,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         this.store.dispatch(ExplorerActions.setPages({ pages: [{ 
             locations: [],
             statement: "",
-            type: "",
+            type: null,
             limit: 100,
             offset: 0,
             count: 0

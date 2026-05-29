@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jena.geosparql.implementation.parsers.wkt.WKTReader;
 import org.apache.jena.query.ParameterizedSparqlString;
+import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
@@ -47,6 +48,7 @@ import net.geoprism.geoai.explorer.core.model.GenericRestException;
 import net.geoprism.geoai.explorer.core.model.Graph;
 import net.geoprism.geoai.explorer.core.model.Location;
 import net.geoprism.geoai.explorer.core.model.LocationPage;
+import net.geoprism.geoai.explorer.core.model.TypeSummary;
 
 @Service
 public class GraphQueryService
@@ -216,9 +218,7 @@ public class GraphQueryService
   public List<Location> query(String statement, int offset, int limit)
   {
     // The agent sometimes includes formatting text. Just remove it...
-    statement = statement.replaceAll("```", "");
-
-    String sparql = new String(statement);
+    String sparql = normalizeLocationStatement(statement);
 
     // Remove existing LIMIT and OFFSET clauses (case-insensitive)
     sparql = sparql.replaceAll("(?i)LIMIT\\s+\\d+", "");
@@ -405,6 +405,8 @@ public class GraphQueryService
   {
     Map<String, Long> holder = new HashMap<>();
 
+    statement = normalizeLocationStatement(statement);
+
     StringBuilder sparql = new StringBuilder();
 
     int selectIndex = statement.toUpperCase().indexOf("SELECT");
@@ -437,6 +439,304 @@ public class GraphQueryService
 
       return holder.getOrDefault("count", 0L);
     }
+  }
+
+  public List<TypeSummary> getTypeCounts(String statement)
+  {
+    List<TypeSummary> results = new ArrayList<>();
+    String sparql = buildTypeCountQuery(statement);
+
+    try (RDFConnection conn = this.createConnection())
+    {
+      conn.querySelect(sparql, (qs) -> {
+        results.add(new TypeSummary(readString(qs, "type"), qs.getLiteral("count").getLong()));
+      });
+    }
+
+    return results;
+  }
+
+  public String buildTypeFilterQuery(String statement, String type)
+  {
+    if (StringUtils.isBlank(type))
+    {
+      return normalizeLocationStatement(statement);
+    }
+
+    return injectWhereFilter(statement, "FILTER(?type = " + sparqlValue(type) + ") .");
+  }
+
+  public String buildExcludedTypesQuery(String statement, List<String> excludedTypes)
+  {
+    if (excludedTypes == null || excludedTypes.isEmpty())
+    {
+      return normalizeLocationStatement(statement);
+    }
+
+    List<String> values = excludedTypes.stream()
+        .filter(StringUtils::isNotBlank)
+        .map(this::sparqlValue)
+        .toList();
+
+    if (values.isEmpty())
+    {
+      return normalizeLocationStatement(statement);
+    }
+
+    return injectWhereFilter(statement, "FILTER(?type NOT IN (" + String.join(", ", values) + ")) .");
+  }
+
+  private String buildTypeCountQuery(String statement)
+  {
+    String clean = normalizeLocationStatement(statement);
+    int selectIndex = indexOfKeyword(clean, "SELECT");
+    int fromIndex = indexOfKeyword(clean, "FROM");
+    int whereIndex = indexOfKeyword(clean, "WHERE");
+
+    if (selectIndex == -1 || whereIndex == -1)
+    {
+      throw new IllegalArgumentException("Unable to derive type count query from SPARQL statement.");
+    }
+
+    StringBuilder sparql = new StringBuilder();
+    sparql.append(clean, 0, selectIndex);
+    sparql.append("SELECT ?type (COUNT(DISTINCT ?uri) AS ?count)\n");
+
+    if (fromIndex != -1 && fromIndex < whereIndex)
+    {
+      sparql.append(clean, fromIndex, whereIndex);
+    }
+
+    sparql.append(clean.substring(whereIndex));
+    sparql.append("\nGROUP BY ?type\nORDER BY DESC(?count)");
+
+    validateSparql(sparql.toString());
+
+    return sparql.toString();
+  }
+
+  private String injectWhereFilter(String statement, String filter)
+  {
+    String clean = normalizeLocationStatement(statement);
+    int whereIndex = indexOfKeyword(clean, "WHERE");
+
+    if (whereIndex == -1)
+    {
+      throw new IllegalArgumentException("Unable to inject type filter into SPARQL statement.");
+    }
+
+    int openBrace = clean.indexOf('{', whereIndex);
+
+    if (openBrace == -1)
+    {
+      throw new IllegalArgumentException("SPARQL statement does not contain a WHERE block.");
+    }
+
+    int closeBrace = findMatchingBrace(clean, openBrace);
+
+    if (closeBrace == -1)
+    {
+      throw new IllegalArgumentException("SPARQL statement contains an unbalanced WHERE block.");
+    }
+
+    String sparql = clean.substring(0, closeBrace) + "\n  " + filter + "\n" + clean.substring(closeBrace);
+
+    validateSparql(sparql);
+
+    return sparql;
+  }
+
+  private String cleanForDerivedQuery(String statement)
+  {
+    String sparql = statement.replaceAll("```", "").trim();
+    sparql = sparql.replaceAll("(?is)ORDER\\s+BY\\s+.*?(?=LIMIT\\s+\\d+|OFFSET\\s+\\d+|$)", "");
+    sparql = sparql.replaceAll("(?i)LIMIT\\s+\\d+", "");
+    sparql = sparql.replaceAll("(?i)OFFSET\\s+\\d+", "");
+
+    return sparql.trim();
+  }
+
+  public String normalizeLocationStatement(String statement)
+  {
+    String clean = cleanForDerivedQuery(statement);
+    int selectIndex = indexOfKeyword(clean, "SELECT");
+    int whereIndex = indexOfKeyword(clean, "WHERE");
+
+    if (selectIndex == -1 || whereIndex == -1)
+    {
+      return clean;
+    }
+
+    int openBrace = clean.indexOf('{', whereIndex);
+
+    if (openBrace == -1)
+    {
+      return clean;
+    }
+
+    int closeBrace = findMatchingBrace(clean, openBrace);
+
+    if (closeBrace == -1)
+    {
+      return clean;
+    }
+
+    String prefixAndDataset = clean.substring(0, selectIndex) +
+        "SELECT ?uri ?type ?code ?label ?wkt\n" +
+        clean.substring(indexAfterProjection(clean, selectIndex), whereIndex);
+    String whereBlock = clean.substring(whereIndex, closeBrace);
+    String projection = clean.substring(selectIndex, whereIndex);
+    List<String> bindings = buildCoreAliasBindings(projection);
+
+    StringBuilder normalized = new StringBuilder(prefixAndDataset);
+    normalized.append(whereBlock);
+
+    if (!bindings.isEmpty())
+    {
+      normalized.append("\n");
+      bindings.forEach(binding -> normalized.append("  ").append(binding).append("\n"));
+    }
+
+    normalized.append("}");
+
+    return normalized.toString().trim();
+  }
+
+  private int indexAfterProjection(String sparql, int selectIndex)
+  {
+    int fromIndex = indexOfKeyword(sparql, "FROM");
+    int whereIndex = indexOfKeyword(sparql, "WHERE");
+
+    if (fromIndex != -1 && fromIndex < whereIndex)
+    {
+      return fromIndex;
+    }
+
+    return whereIndex;
+  }
+
+  private List<String> buildCoreAliasBindings(String projection)
+  {
+    return List.of("uri", "type", "code", "label", "wkt").stream()
+        .map(alias -> buildAliasBinding(projection, alias))
+        .filter(StringUtils::isNotBlank)
+        .toList();
+  }
+
+  private String buildAliasBinding(String projection, String alias)
+  {
+    String expression = findProjectionExpression(projection, alias);
+
+    if (StringUtils.isBlank(expression) || expression.equals("?" + alias))
+    {
+      return null;
+    }
+
+    return "BIND(" + expression + " AS ?" + alias + ") .";
+  }
+
+  private String findProjectionExpression(String projection, String alias)
+  {
+    Pattern samplePattern = Pattern.compile(
+        "\\(\\s*SAMPLE\\s*\\(\\s*(.*?)\\s*\\)\\s+AS\\s+\\?" + Pattern.quote(alias) + "\\s*\\)",
+        Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+    );
+    java.util.regex.Matcher sampleMatcher = samplePattern.matcher(projection);
+
+    if (sampleMatcher.find())
+    {
+      return sampleMatcher.group(1).trim();
+    }
+
+    Pattern aliasPattern = Pattern.compile(
+        "\\(\\s*(.*?)\\s+AS\\s+\\?" + Pattern.quote(alias) + "\\s*\\)",
+        Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+    );
+    java.util.regex.Matcher aliasMatcher = aliasPattern.matcher(projection);
+
+    if (aliasMatcher.find())
+    {
+      return aliasMatcher.group(1).trim();
+    }
+
+    Pattern directPattern = Pattern.compile("\\?" + Pattern.quote(alias) + "\\b");
+    java.util.regex.Matcher directMatcher = directPattern.matcher(projection);
+
+    if (directMatcher.find())
+    {
+      return "?" + alias;
+    }
+
+    return "?" + alias;
+  }
+
+  private int indexOfKeyword(String sparql, String keyword)
+  {
+    return sparql.toUpperCase().indexOf(keyword);
+  }
+
+  private int findMatchingBrace(String value, int openBrace)
+  {
+    int depth = 0;
+    boolean inString = false;
+    char stringDelimiter = '\0';
+
+    for (int i = openBrace; i < value.length(); i++)
+    {
+      char c = value.charAt(i);
+      char previous = i > 0 ? value.charAt(i - 1) : '\0';
+
+      if ((c == '"' || c == '\'') && previous != '\\')
+      {
+        if (!inString)
+        {
+          inString = true;
+          stringDelimiter = c;
+        }
+        else if (stringDelimiter == c)
+        {
+          inString = false;
+        }
+      }
+
+      if (inString)
+      {
+        continue;
+      }
+
+      if (c == '{')
+      {
+        depth++;
+      }
+      else if (c == '}')
+      {
+        depth--;
+
+        if (depth == 0)
+        {
+          return i;
+        }
+      }
+    }
+
+    return -1;
+  }
+
+  private String sparqlValue(String type)
+  {
+    String trimmed = type.trim();
+
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://"))
+    {
+      return "<" + escapeSparqlIri(trimmed) + ">";
+    }
+
+    return "\"" + trimmed.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+  }
+
+  private void validateSparql(String sparql)
+  {
+    QueryFactory.create(sparql);
   }
 
   public Location getAttributes(final String uri, boolean includeGeometry)
@@ -590,6 +890,81 @@ public class GraphQueryService
         }
       }
     }
+  }
+
+  public void injectAttributes(LocationPage locations)
+  {
+    if (locations == null || locations.getLocations() == null)
+    {
+      return;
+    }
+
+    Map<String, Location> locationsById = locations.getLocations().stream().filter(location -> location.getId() != null).collect(Collectors.toMap(Location::getId, Function.identity(), (a, b) -> a));
+    List<Location> withIds = locations.getLocations().stream().filter(location -> location.getId() != null && !location.getId().isBlank()).toList();
+
+    int batchSize = 50;
+
+    for (int i = 0; i < withIds.size(); i += batchSize)
+    {
+      int end = Math.min(i + batchSize, withIds.size());
+      List<Location> batch = withIds.subList(i, end);
+      String sparql = buildAttributeLookupQuery(batch);
+
+      try (RDFConnection conn = this.createConnection())
+      {
+        conn.querySelect(sparql, (qs) -> {
+          String uri = readString(qs, "uri");
+          String attribute = readString(qs, "p");
+
+          if (attribute.contains("-"))
+          {
+            attribute = attribute.split("-")[1];
+          }
+
+          if (isCoreLocationField(attribute) || attribute.equalsIgnoreCase("asWKT"))
+          {
+            return;
+          }
+
+          Object value = readPropertyValue(qs, "o");
+          Location location = locationsById.get(uri);
+
+          if (location != null && value != null && !location.getProperties().containsKey(attribute))
+          {
+            location.addProperty(attribute, value);
+          }
+        });
+      }
+    }
+  }
+
+  private String buildAttributeLookupQuery(List<Location> locations)
+  {
+    StringBuilder sparql = new StringBuilder();
+
+    sparql.append(PREFIXES);
+    sparql.append("""
+
+        SELECT ?uri ?p ?o
+        FROM <https://localhost:4200/lpg/graph_801104/0#>
+        WHERE {
+          VALUES ?uri {
+        """);
+
+    for (Location location : locations)
+    {
+      sparql.append("          <").append(escapeSparqlIri(location.getId())).append(">\n");
+    }
+
+    sparql.append("""
+          }
+
+          ?uri ?p ?o .
+          FILTER(?p != geo:hasGeometry)
+        }
+        """);
+
+    return sparql.toString();
   }
 
   private String buildGeometryLookupQuery(List<Location> locations)

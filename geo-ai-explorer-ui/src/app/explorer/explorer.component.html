@@ -208,6 +208,7 @@
 
     <ng-container>
       <results-table
+        #resultsTable
         (resultsHeightChange)="onResultsHeightChange($event)"
         (resultsCollapsedChange)="onResultsCollapsedChange($event)"
         [collapsed]="resultsCollapsed"
@@ -243,7 +244,14 @@
                  [ngStyle]="{ background: legend.color }">
             </div>
 
-            <label>{{ legend.label }}</label>
+            <button type="button"
+                    class="legend-layer-name"
+                    (pointerdown)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                    (touchstart)="$event.stopPropagation()"
+                    (click)="openResultsForType(type, $event)">
+              {{ legend.label }}
+            </button>
           </ng-container>
         </div>
       </div>
