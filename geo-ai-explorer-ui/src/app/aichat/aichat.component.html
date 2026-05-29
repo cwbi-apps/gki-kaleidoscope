@@ -1,7 +1,11 @@
 <div class="aichat-root">
 <p-confirmDialog appendTo="body"></p-confirmDialog>
 
-<div class="chat-container" [class.minimized]="minimized">
+<div
+  #chatContainer
+  class="chat-container"
+  [class.minimized]="minimized"
+  [style.--chat-sidebar-width.px]="sidebarWidthPx">
 
   <div *ngIf="mapLoading" class="spinner-overlay">
     <p-progress-spinner ariaLabel="loading" />
@@ -151,6 +155,13 @@
       </div>
     </ng-container>
   </aside>
+
+  <div
+    *ngIf="!minimized"
+    class="sidebar-resize-handle"
+    title="Resize sidebar"
+    (mousedown)="startSidebarResize($event)">
+  </div>
 
   <main class="chat-main" (click)="cancelSavedQueryTitleEdit()">
     <div *ngIf="!minimized" class="messages">

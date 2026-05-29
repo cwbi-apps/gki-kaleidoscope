@@ -1,4 +1,4 @@
-import { Component, HostListener, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -69,6 +69,9 @@ export class AichatComponent {
   private readonly STORAGE_KEY = 'aichat.conversations.v1';
   private readonly ACTIVE_CONVERSATION_STORAGE_KEY = 'aichat.activeConversationId.v1';
   private readonly ACTIVE_SIDEBAR_TAB_STORAGE_KEY = 'aichat.activeSidebarTab.v1';
+  private readonly SIDEBAR_WIDTH_STORAGE_KEY = 'aichat.sidebarWidth.v1';
+  private readonly minSidebarWidthPx = 280;
+  private readonly maxSidebarWidthPx = 520;
 
   icon = faEraser;
   edit = faPencil;
@@ -102,6 +105,10 @@ export class AichatComponent {
   public highlightChatMessageId: string | null = null;
   public editingSavedQueryId: string | null = null;
   public editingSavedQueryTitle = '';
+  public sidebarWidthPx = this.loadSidebarWidth();
+  private resizingSidebar = false;
+
+  @ViewChild('chatContainer') chatContainer?: ElementRef<HTMLElement>;
 
   constructor(
     private chatService: ChatService,
@@ -138,6 +145,44 @@ export class AichatComponent {
 
   ngOnDestroy(): void {
     this.onWorkflowStepChange.unsubscribe();
+  }
+
+  startSidebarResize(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.resizingSidebar = true;
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onSidebarResize(event: MouseEvent): void {
+    if (!this.resizingSidebar || !this.chatContainer) {
+      return;
+    }
+
+    const rect = this.chatContainer.nativeElement.getBoundingClientRect();
+    const nextWidth = event.clientX - rect.left;
+    this.sidebarWidthPx = Math.min(this.maxSidebarWidthPx, Math.max(this.minSidebarWidthPx, nextWidth));
+  }
+
+  @HostListener('document:mouseup')
+  stopSidebarResize(): void {
+    if (!this.resizingSidebar) {
+      return;
+    }
+
+    this.resizingSidebar = false;
+    localStorage.setItem(this.SIDEBAR_WIDTH_STORAGE_KEY, this.sidebarWidthPx.toString());
+  }
+
+  private loadSidebarWidth(): number {
+    const raw = Number(localStorage.getItem(this.SIDEBAR_WIDTH_STORAGE_KEY));
+
+    if (!Number.isFinite(raw)) {
+      return 300;
+    }
+
+    return Math.min(this.maxSidebarWidthPx, Math.max(this.minSidebarWidthPx, raw));
   }
 
   get activeConversation(): ChatConversation | undefined {
