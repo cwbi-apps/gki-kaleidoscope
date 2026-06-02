@@ -41,7 +41,10 @@ public class AppProperties
 
   public Region getBedrockRegion()
   {
-    String configured = env.getProperty("bedrock.region");
+    String configured = getFirstNonBlankProperty(
+		"aws.region",
+        "bedrock.region"
+    );
 
     if (configured != null && !configured.isBlank())
     {
@@ -53,7 +56,10 @@ public class AppProperties
 
   public Region getNeptuneRegion()
   {
-    String configured = env.getProperty("neptune.region", env.getProperty("bedrock.region"));
+    String configured = getFirstNonBlankProperty(
+		"aws.region",
+        "neptune.region"
+    );
 
     if (configured != null && !configured.isBlank())
     {
@@ -95,7 +101,10 @@ public class AppProperties
   
   public Region getOpenSearchRegion()
   {
-    String configured = env.getProperty("opensearch.region", env.getProperty("bedrock.region"));
+    String configured = getFirstNonBlankProperty(
+		"aws.region",
+        "opensearch.region"
+    );
 
     if (configured != null && !configured.isBlank())
     {
