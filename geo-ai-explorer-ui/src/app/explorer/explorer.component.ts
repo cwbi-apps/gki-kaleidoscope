@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, TemplateRef, ViewChild, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, AfterViewInit, ElementRef, TemplateRef, ViewChild, inject, OnInit, OnDestroy } from '@angular/core';
 import { Map, NavigationControl, AttributionControl, LngLatBounds, LngLat, GeoJSONSource, LngLatBoundsLike, MapGeoJSONFeature, Source } from "maplibre-gl";
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -39,6 +39,13 @@ import { DialogModule } from 'primeng/dialog';
 
 export interface TypeLegend { [key: string]: { label: string, color: string, visible: boolean, included: boolean } }
 
+export type InspectorPane = 'map' | 'attributes' | 'graph';
+
+interface InspectorPaneOption {
+    value: InspectorPane;
+    label: string;
+}
+
 @Component({
     selector: 'app-explorer',
     imports: [
@@ -64,6 +71,18 @@ export interface TypeLegend { [key: string]: { label: string, color: string, vis
 })
 export class ExplorerComponent implements OnInit, OnDestroy {
     @ViewChild('resultsTable') resultsTable?: ResultsTableComponent;
+    @ViewChild('mapElement') set mapElementRef(ref: ElementRef<HTMLElement> | undefined) {
+        const previousElement = this.mapElement?.nativeElement;
+        this.mapElement = ref;
+
+        if (ref && previousElement && previousElement !== ref.nativeElement && this.map) {
+            this.destroyMap();
+        }
+
+        if (ref && this.shouldShowMapForWorkflow(this.workflowStep)) {
+            this.syncMapToInspectorLayout();
+        }
+    }
 
     public WorkflowStep = WorkflowStep;
     public backIcon = faArrowLeft;
@@ -140,7 +159,12 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     public highlightedObject: GeoObject | null | undefined;
 
     private mapInitialized = false;
+    private mapInitScheduled = false;
     private renderScheduled = false;
+    private zoomInspectorMapOnNextRender = false;
+    private mapResizeScheduled = false;
+    private mapSyncScheduled = false;
+    private mapElement?: ElementRef<HTMLElement>;
     private currentGeoObjects: GeoObject[] = [];
     private geoObjectsByUri = new globalThis.Map<string, GeoObject>();
 
@@ -170,6 +194,17 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     public activeTab: string = '0';
 
     public chatMinimized: boolean = false;
+
+    public inspectorPaneOptions: InspectorPaneOption[] = [
+        { value: 'map', label: 'Map' },
+        { value: 'attributes', label: 'Attributes' },
+        { value: 'graph', label: 'Graph' }
+    ];
+    public inspectorPanes: [InspectorPane, InspectorPane] = ['attributes', 'map'];
+    public inspectorSplitPercent = 30;
+    private inspectorResizeStartX = 0;
+    private inspectorResizeStartPercent = 30;
+    private inspectorResizeContainerWidth = 0;
 
     public resultsPanelHeightPx = Math.round(window.innerHeight * 0.4);
     public resultsCollapsed = false;
@@ -222,6 +257,10 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.zoomMap = zoomMap;
                 this.updateGeoObjectIndex();
 
+                if (this.isInspectorWorkflowStep() && this.isInspectorPaneActive('map')) {
+                    this.zoomInspectorMapOnNextRender = true;
+                }
+
                 this.scheduleRender();
             });
 
@@ -238,6 +277,9 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             .subscribe(([object, zoomMap]) => {
                 this.activeTab = "0";
                 this.selectObject(object, zoomMap);
+                if (this.isInspectorWorkflowStep() && this.isInspectorPaneActive('map')) {
+                    this.zoomInspectorMapOnNextRender = true;
+                }
                 this.resizeMapAfterLayoutChange();
                 this.updateGeoObjectIndex();
                 this.writeUrlState(this.workflowStep, { pageCacheId: this.currentPageCacheId });
@@ -272,7 +314,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
                 this.updateGeoObjectIndex();
 
-                if (this.isMapWorkflowStep(step)) {
+                if (this.shouldShowMapForWorkflow(step)) {
                     this.ensureMapInitialized();
 
                     if (data?.pageCacheId) {
@@ -674,19 +716,116 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     private resizeMapAfterLayoutChange(): void {
+        if (this.mapResizeScheduled) {
+            return;
+        }
+
+        this.mapResizeScheduled = true;
+
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
+                this.mapResizeScheduled = false;
                 this.map?.resize();
             });
         });
     }
 
-    private isMapWorkflowStep(step: WorkflowStep): boolean {
+    private shouldShowMapForWorkflow(step: WorkflowStep): boolean {
+        if (step === WorkflowStep.InspectObject || step === WorkflowStep.ViewNeighbors) {
+            return this.isInspectorPaneActive('map');
+        }
+
         return step === WorkflowStep.MapAndResults ||
             step === WorkflowStep.DisambiguateObject ||
-            step === WorkflowStep.MinimizeChat ||
-            step === WorkflowStep.InspectObject ||
-            step === WorkflowStep.ViewNeighbors;
+            step === WorkflowStep.MinimizeChat;
+    }
+
+    public isInspectorWorkflowStep(): boolean {
+        return this.workflowStep === WorkflowStep.InspectObject ||
+            this.workflowStep === WorkflowStep.ViewNeighbors;
+    }
+
+    public isInspectorPaneActive(pane: InspectorPane): boolean {
+        return this.inspectorPanes.includes(pane);
+    }
+
+    public setInspectorPane(index: 0 | 1, pane: InspectorPane): void {
+        const otherIndex = index === 0 ? 1 : 0;
+
+        if (this.inspectorPanes[otherIndex] === pane) {
+            this.inspectorPanes[otherIndex] = this.inspectorPanes[index];
+        }
+
+        this.inspectorPanes[index] = pane;
+        this.inspectorPanes = [...this.inspectorPanes] as [InspectorPane, InspectorPane];
+        this.syncMapToInspectorLayout();
+    }
+
+    public isInspectorPaneOptionDisabled(index: 0 | 1, pane: InspectorPane): boolean {
+        const otherIndex = index === 0 ? 1 : 0;
+        return this.inspectorPanes[otherIndex] === pane;
+    }
+
+    public inspectorPaneLabel(pane: InspectorPane): string {
+        return this.inspectorPaneOptions.find(option => option.value === pane)?.label ?? pane;
+    }
+
+    public startInspectorResize(event: PointerEvent): void {
+        const container = (event.currentTarget as HTMLElement).closest('.inspector-workspace') as HTMLElement | null;
+
+        if (!container) {
+            return;
+        }
+
+        this.inspectorResizeStartX = event.clientX;
+        this.inspectorResizeStartPercent = this.inspectorSplitPercent;
+        this.inspectorResizeContainerWidth = container.getBoundingClientRect().width;
+        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+        event.preventDefault();
+    }
+
+    public onInspectorResize(event: PointerEvent): void {
+        if (this.inspectorResizeContainerWidth <= 0) {
+            return;
+        }
+
+        const deltaPercent = ((event.clientX - this.inspectorResizeStartX) / this.inspectorResizeContainerWidth) * 100;
+        this.inspectorSplitPercent = this.clampInspectorSplit(this.inspectorResizeStartPercent + deltaPercent);
+        this.resizeMapAfterLayoutChange();
+    }
+
+    public endInspectorResize(event: PointerEvent): void {
+        this.inspectorResizeContainerWidth = 0;
+        (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+        this.resizeMapAfterLayoutChange();
+    }
+
+    private clampInspectorSplit(value: number): number {
+        return Math.min(75, Math.max(25, value));
+    }
+
+    private syncMapToInspectorLayout(): void {
+        if (this.mapSyncScheduled) {
+            return;
+        }
+
+        this.mapSyncScheduled = true;
+
+        requestAnimationFrame(() => {
+            this.mapSyncScheduled = false;
+
+            if (this.shouldShowMapForWorkflow(this.workflowStep)) {
+                if (this.isInspectorWorkflowStep()) {
+                    this.zoomInspectorMapOnNextRender = true;
+                }
+
+                this.ensureMapInitialized();
+                this.scheduleRender();
+                this.resizeMapAfterLayoutChange();
+            } else if (this.isInspectorWorkflowStep()) {
+                this.destroyMap();
+            }
+        });
     }
 
     private destroyMap(): void {
@@ -701,7 +840,6 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         this.typeLegend = {};
         this.orderedTypes = [];
         this.highlightedObject = null;
-        this.selectedObject = undefined;
     }
 
     private runWhenMapReady(callback: () => void, maxFrames = 120): void {
@@ -795,9 +933,16 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     private ensureMapInitialized(): void {
+        if (this.mapInitScheduled) {
+            return;
+        }
+
+        this.mapInitScheduled = true;
+
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                const el = document.getElementById('map');
+                this.mapInitScheduled = false;
+                const el = this.mapElement?.nativeElement;
 
                 if (!el) return;
 
@@ -838,8 +983,9 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
             this.mapGeoObjects();
 
-            if (this.zoomMap) {
+            if (this.zoomMap || this.zoomInspectorMapOnNextRender) {
                 this.zoomToAll();
+                this.zoomInspectorMapOnNextRender = false;
             }
 
             this.renderHighlights();
@@ -1623,7 +1769,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         const layer = this.baseLayers[0];
 
         const mapConfig: any = {
-            container: "map",
+            container: this.mapElement?.nativeElement ?? "map",
             bounds: [[-125.0011, 24.9493], [-66.9326, 49.5904] ], // USA
             fitBoundsOptions: { padding: 100 },
             style: {
@@ -1783,6 +1929,10 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     renderHighlights() {
+        if (!this.map) {
+            return;
+        }
+
         if (this.selectedObject != null) {
             const index = this.orderedTypes.findIndex(t => t === this.selectedObject!.properties.type);
 
@@ -1798,11 +1948,11 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         let oldHighlight = this.highlightedObject;
         let newHighlight = this.getGeoObjectByUri(uri) ?? null;
 
-        if (oldHighlight != null) {
+        if (this.map && oldHighlight != null) {
             this.map!.setFilter("hover-" + oldHighlight.properties.type, ["all", ["==", "uri", "NONE"] ]);
         }
 
-        if (newHighlight != null) {
+        if (this.map && newHighlight != null) {
             this.map!.setFilter("hover-" + newHighlight.properties.type, ["all", ["==", "uri", newHighlight.id] ]);
         }
 
@@ -1830,6 +1980,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
             // The geo object does exist on the map
             // if (go != null) {
+            if (this.shouldShowMapForWorkflow(this.workflowStep)) {
                 if (zoomTo) {
                     this.runWhenMapReady(() => {
                         this.render();
@@ -1842,13 +1993,14 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                         this.renderHighlights();
                     });
                 }
+            }
             // }
         } else {
             this.selectedObject = undefined;
             this.updateGeoObjectIndex();
         }
 
-        if (previousSelected != null) {
+        if (this.map && previousSelected != null) {
             this.map!.setFeatureState({ source: previousSelected.properties.type, id: previousSelected.id }, { selected: false });
         }
     }

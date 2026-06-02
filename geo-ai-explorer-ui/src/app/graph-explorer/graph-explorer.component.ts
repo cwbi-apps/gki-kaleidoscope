@@ -162,7 +162,9 @@ export class GraphExplorerComponent implements OnDestroy {
               if (this.gprGraph != null && step === WorkflowStep.ViewNeighbors)
                 this.renderGraph(that.gprGraph!, false)
             }, 100);
-          } else if (step !== WorkflowStep.MapAndResults && step !== WorkflowStep.MinimizeChat) {
+          } else if (step !== WorkflowStep.MapAndResults &&
+            step !== WorkflowStep.MinimizeChat &&
+            step !== WorkflowStep.InspectObject) {
             // Hmm.. seems kinda sketch
             this.store.dispatch(ExplorerActions.setNeighbors({ objects: [], zoomMap: false }));
           }
@@ -255,9 +257,11 @@ export class GraphExplorerComponent implements OnDestroy {
 
     if (zoom)
       window.setTimeout(() => {
-        this.zoomToUri(this.selectedObject!.properties.uri);
-        window.setTimeout(() => { this.loading = false; },5);
-        console.log(this.gprGraph?.typeCount);
+        try {
+          this.zoomToUri(this.selectedObject!.properties.uri);
+        } finally {
+          window.setTimeout(() => { this.loading = false; }, 5);
+        }
       }, 1000); // We're very much guessing how long the graph can take to render here. On very slow computers it's possible this might not be long enough. Unfortunately ngx-graph does not provide a callback to listen to when the graph is finished.
     else
       this.loading = false;
@@ -359,6 +363,10 @@ export class GraphExplorerComponent implements OnDestroy {
   }
 
   public zoomToUri(uri: string) {
+    if (!this.graph) {
+      return;
+    }
+
     const desiredZoomLevel = 0.6;
 
     this.graph.zoom(desiredZoomLevel / this.graph.zoomLevel);
