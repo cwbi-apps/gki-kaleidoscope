@@ -28,6 +28,7 @@ export class ExplorerSessionStateService {
   private readonly prefix = 'explorer.pages.';
   private readonly savedPrefix = 'explorer.savedPages.';
   private readonly maxSessionCaches = 25;
+  private readonly maxQuotaWriteAttempts = 12;
 
   private readonly savedQueriesSubject = new BehaviorSubject<CachedExplorerPages[]>(this.listSavedPages());
 
@@ -56,10 +57,19 @@ export class ExplorerSessionStateService {
     };
 
     try {
-      sessionStorage.setItem(this.storageKey(id), JSON.stringify(cache));
+      this.pruneSessionCaches();
 
       if (saved) {
-        localStorage.setItem(this.savedStorageKey(id), JSON.stringify(cache));
+        sessionStorage.removeItem(this.storageKey(id));
+
+        if (!this.setLocalItemWithSessionEviction(this.savedStorageKey(id), JSON.stringify(cache), id)) {
+          throw new Error(`Unable to update saved explorer pages [${id}] after session cache eviction.`);
+        }
+      }
+      else {
+        if (!this.setSessionItemWithEviction(this.storageKey(id), JSON.stringify(cache), id)) {
+          throw new Error(`Unable to cache explorer pages [${id}] after session cache eviction.`);
+        }
       }
 
       this.pruneSessionCaches();
@@ -91,7 +101,14 @@ export class ExplorerSessionStateService {
       }
 
       cache.accessedAt = Date.now();
-      sessionStorage.setItem(this.storageKey(id), JSON.stringify(cache));
+
+      if (cache.saved || this.hasSavedCache(id)) {
+        sessionStorage.removeItem(this.storageKey(id));
+        this.setLocalItemWithSessionEviction(this.savedStorageKey(id), JSON.stringify({ ...cache, saved: true }), id);
+      }
+      else {
+        this.setSessionItemWithEviction(this.storageKey(id), JSON.stringify(cache), id);
+      }
 
       return Array.isArray(cache.pages)
         ? cache.pages
@@ -171,7 +188,13 @@ export class ExplorerSessionStateService {
     };
 
     try {
-      sessionStorage.setItem(this.storageKey(id), JSON.stringify(touched));
+      if (touched.saved || this.hasSavedCache(id)) {
+        sessionStorage.removeItem(this.storageKey(id));
+        this.setLocalItemWithSessionEviction(this.savedStorageKey(id), JSON.stringify({ ...touched, saved: true }), id);
+      }
+      else {
+        this.setSessionItemWithEviction(this.storageKey(id), JSON.stringify(touched), id);
+      }
     } catch (error) {
       console.warn('Failed to update cached explorer pages access time', error);
     }
@@ -191,11 +214,11 @@ export class ExplorerSessionStateService {
       : index + 1;
   }
 
-  saveCachedPages(id: string, title?: string): void {
+  saveCachedPages(id: string, title?: string): boolean {
     const cache = this.getCache(id);
 
     if (!cache) {
-      return;
+      return false;
     }
 
     const trimmedTitle = title?.trim();
@@ -208,12 +231,23 @@ export class ExplorerSessionStateService {
         : cache.title
     };
 
+    const serialized = JSON.stringify(savedCache);
+
     try {
-      sessionStorage.setItem(this.storageKey(id), JSON.stringify(savedCache));
-      localStorage.setItem(this.savedStorageKey(id), JSON.stringify(savedCache));
+      this.pruneSessionCaches();
+
+      sessionStorage.removeItem(this.storageKey(id));
+
+      if (!this.setLocalItemWithSessionEviction(this.savedStorageKey(id), serialized, id)) {
+        throw new Error(`Unable to save explorer pages [${id}] after session cache eviction.`);
+      }
+
       this.refreshSavedQueries();
-    } catch (error) {
+      return true;
+    }
+    catch (error) {
       console.warn('Failed to save explorer pages cache', error);
+      return false;
     }
   }
 
@@ -238,8 +272,14 @@ export class ExplorerSessionStateService {
     };
 
     try {
-      sessionStorage.setItem(this.storageKey(id), JSON.stringify(renamedCache));
-      localStorage.setItem(this.savedStorageKey(id), JSON.stringify(renamedCache));
+      const serialized = JSON.stringify(renamedCache);
+
+      sessionStorage.removeItem(this.storageKey(id));
+
+      if (!this.setLocalItemWithSessionEviction(this.savedStorageKey(id), serialized, id)) {
+        throw new Error(`Unable to rename explorer pages [${id}] after session cache eviction.`);
+      }
+
       this.refreshSavedQueries();
     } catch (error) {
       console.warn('Failed to rename saved explorer pages cache', error);
@@ -261,7 +301,11 @@ export class ExplorerSessionStateService {
 
     try {
       localStorage.removeItem(this.savedStorageKey(id));
-      sessionStorage.setItem(this.storageKey(id), JSON.stringify(unsavedCache));
+
+      if (!this.setSessionItemWithEviction(this.storageKey(id), JSON.stringify(unsavedCache), id)) {
+        throw new Error(`Unable to unsave explorer pages [${id}] in session cache after eviction.`);
+      }
+
       this.refreshSavedQueries();
     } catch (error) {
       console.warn('Failed to unsave explorer pages cache', error);
@@ -299,12 +343,6 @@ export class ExplorerSessionStateService {
         ...savedCache,
         saved: true
       };
-
-      try {
-        sessionStorage.setItem(this.storageKey(id), JSON.stringify(restored));
-      } catch (error) {
-        console.warn('Failed to restore saved explorer pages cache into sessionStorage', error);
-      }
 
       return restored;
     }
@@ -384,6 +422,61 @@ export class ExplorerSessionStateService {
       sessionStorage.removeItem(this.storageKey(oldest.id));
       sessionCaches.splice(sessionCaches.findIndex(cache => cache.id === oldest.id), 1);
     }
+  }
+
+  private setSessionItemWithEviction(key: string, value: string, protectedId?: string): boolean {
+    for (let attempt = 0; attempt < this.maxQuotaWriteAttempts; attempt++) {
+      try {
+        sessionStorage.setItem(key, value);
+        return true;
+      }
+      catch (error) {
+        if (!this.isQuotaExceededError(error) || !this.evictSessionCacheEntry(protectedId)) {
+          console.warn('Failed to write explorer pages cache to sessionStorage', error);
+          return false;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private setLocalItemWithSessionEviction(key: string, value: string, protectedId?: string): boolean {
+    for (let attempt = 0; attempt < this.maxQuotaWriteAttempts; attempt++) {
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      }
+      catch (error) {
+        if (!this.isQuotaExceededError(error) || !this.evictSessionCacheEntry(protectedId)) {
+          console.warn('Failed to write saved explorer pages cache to localStorage', error);
+          return false;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private evictSessionCacheEntry(protectedId?: string): boolean {
+    const sessionCaches = this.collectCaches(sessionStorage, this.prefix)
+      .filter(cache => cache.id !== protectedId)
+      .sort((a, b) => a.accessedAt - b.accessedAt);
+
+    const unsaved = sessionCaches.find(cache => !cache.saved && !this.hasSavedCache(cache.id));
+    const evictable = unsaved ?? sessionCaches.find(cache => cache.saved || this.hasSavedCache(cache.id));
+
+    if (!evictable) {
+      return false;
+    }
+
+    sessionStorage.removeItem(this.storageKey(evictable.id));
+    return true;
+  }
+
+  private isQuotaExceededError(error: unknown): boolean {
+    return error instanceof DOMException &&
+      (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED');
   }
 
   private storageKey(id: string): string {

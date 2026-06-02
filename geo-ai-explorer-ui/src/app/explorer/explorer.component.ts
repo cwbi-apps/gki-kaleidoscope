@@ -167,6 +167,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
     public resultsPanelHeightPx = Math.round(window.innerHeight * 0.4);
     public resultsCollapsed = false;
+    private readonly defaultResultsPanelHeightPx = 360;
 
     public pages: LocationPage[] = [{
         locations: [],
@@ -530,15 +531,15 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             return;
         }
 
-        this.explorerSessionState.saveCachedPages(this.currentPageCacheId, this.saveQueryName);
-        this.saveQueryDialogVisible = false;
+        if (this.explorerSessionState.saveCachedPages(this.currentPageCacheId, this.saveQueryName)) {
+            this.saveQueryDialogVisible = false;
+        }
     }
 
     onResultsHeightChange(heightPx: number): void {
         this.resultsPanelHeightPx = heightPx;
 
         this.resizeMapAfterLayoutChange();
-        this.render();
     }
 
     onResultsCollapsedChange(collapsed: boolean): void {
@@ -552,8 +553,20 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
         this.resultsTable?.selectActivePage(type);
         this.resultsCollapsed = false;
+        this.resultsPanelHeightPx = this.getExpandedResultsPanelHeight();
         this.resizeMapAfterLayoutChange();
         this.render();
+    }
+
+    private getExpandedResultsPanelHeight(): number {
+        if (this.resultsPanelHeightPx > 0) {
+            return this.resultsPanelHeightPx;
+        }
+
+        return Math.round(Math.min(
+            this.defaultResultsPanelHeightPx,
+            Math.max(220, window.innerHeight - 96)
+        ));
     }
 
     private resizeMapAfterLayoutChange(): void {
