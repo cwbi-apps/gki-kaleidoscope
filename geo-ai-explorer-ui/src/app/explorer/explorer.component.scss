@@ -475,6 +475,14 @@ results-table {
   overflow: auto;
 }
 
+.legend ::ng-deep .p-panel-header {
+  cursor: pointer;
+}
+
+.legend ::ng-deep .p-panel-header button {
+  cursor: pointer;
+}
+
 .legend-item {
   cursor: grab;
   padding: 0.35rem 0;

@@ -133,6 +133,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     public loading: boolean = false;
 
     public typeLegend: TypeLegend = {};
+    public legendCollapsed = true;
 
     public selectedObject?: GeoObject;
 
@@ -645,6 +646,20 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         if (this.workflowStep === WorkflowStep.InspectObject) {
             this.scheduleRender();
         }
+    }
+
+    onLegendPanelClick(event: MouseEvent): void {
+        const target = event.target as HTMLElement | null;
+
+        if (!target?.closest('.p-panel-header')) {
+            return;
+        }
+
+        if (target.closest('button, .p-panel-header-icon, .p-panel-toggle-button')) {
+            return;
+        }
+
+        this.legendCollapsed = !this.legendCollapsed;
     }
 
     private getExpandedResultsPanelHeight(): number {

@@ -280,7 +280,8 @@
            "
            [toggleable]="true"
            header="Layers"
-           collapsed="true"
+           [(collapsed)]="legendCollapsed"
+           (click)="onLegendPanelClick($event)"
            class="legend">
 
     <ng-container *ngIf="orderedTypes.length > 0">
