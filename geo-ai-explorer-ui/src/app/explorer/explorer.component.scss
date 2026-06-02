@@ -109,7 +109,7 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
 
 .map-back-button {
   position: absolute;
-  top: 1rem;
+  top: 4.25rem;
   left: 1rem;
   z-index: 25;
   pointer-events: auto;
@@ -122,7 +122,7 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
 
 .map-save-query-button {
   position: absolute;
-  top: 4.25rem;
+  top: 1rem;
   left: 1rem;
   z-index: 25;
   pointer-events: auto;
@@ -163,6 +163,28 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
   border-color: #10b981;
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
   outline: none;
+}
+
+.saved-query-details {
+  gap: 0.75rem;
+}
+
+.saved-query-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #dbe3ef;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.saved-query-meta strong {
+  color: #172033;
+  font-weight: 650;
+  text-align: right;
 }
 
 .results-panel {

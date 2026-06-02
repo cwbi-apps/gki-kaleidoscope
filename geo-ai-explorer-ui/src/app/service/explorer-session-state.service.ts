@@ -15,6 +15,7 @@ export interface CachedExplorerPages {
   createdAt: number;
   updatedAt: number;
   accessedAt: number;
+  savedAt?: number;
   pages: LocationPage[];
   source: CachedExplorerPagesSource;
   title: string;
@@ -48,6 +49,7 @@ export class ExplorerSessionStateService {
       createdAt: existing?.createdAt ?? Date.now(),
       updatedAt: Date.now(),
       accessedAt: Date.now(),
+      savedAt: existing?.savedAt,
       pages,
       source: source === 'unknown'
         ? existing?.source ?? source
@@ -225,6 +227,7 @@ export class ExplorerSessionStateService {
     const savedCache: CachedExplorerPages = {
       ...cache,
       saved: true,
+      savedAt: cache.savedAt ?? Date.now(),
       updatedAt: Date.now(),
       title: trimmedTitle && trimmedTitle.length > 0
         ? trimmedTitle
@@ -268,6 +271,7 @@ export class ExplorerSessionStateService {
       ...cache,
       title: trimmedTitle,
       saved: true,
+      savedAt: cache.savedAt ?? Date.now(),
       updatedAt: Date.now()
     };
 
@@ -296,6 +300,7 @@ export class ExplorerSessionStateService {
     const unsavedCache: CachedExplorerPages = {
       ...cache,
       saved: false,
+      savedAt: undefined,
       updatedAt: Date.now()
     };
 
@@ -393,6 +398,7 @@ export class ExplorerSessionStateService {
         createdAt: cache.createdAt ?? Date.now(),
         updatedAt: cache.updatedAt ?? cache.createdAt ?? Date.now(),
         accessedAt: cache.accessedAt ?? cache.updatedAt ?? cache.createdAt ?? Date.now(),
+        savedAt: cache.savedAt ?? (cache.saved ? cache.updatedAt ?? cache.createdAt ?? Date.now() : undefined),
         title: cache.title ?? this.buildTitle(cache.pages, cache.source ?? 'unknown'),
         saved: cache.saved ?? false
       };

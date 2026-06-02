@@ -44,6 +44,50 @@
     </ng-template>
   </p-dialog>
 
+  <p-dialog
+    header="Saved Query"
+    [(visible)]="savedQueryDialogVisible"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    appendTo="body"
+    styleClass="save-query-dialog">
+    <div class="save-query-form saved-query-details">
+      <div class="saved-query-meta" *ngIf="savedQueryDetails">
+        <span>Saved</span>
+        <strong>{{ formatSavedQueryDate(savedQueryDetails) }}</strong>
+      </div>
+
+      <label for="saved-query-name">Name</label>
+      <input
+        id="saved-query-name"
+        type="text"
+        [(ngModel)]="savedQueryName"
+        (keydown.enter)="renameCurrentSavedQuery()"
+        autocomplete="off" />
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-button
+        severity="danger"
+        label="Unsave"
+        (onClick)="unsaveCurrentQuery()">
+      </p-button>
+
+      <p-button
+        severity="secondary"
+        label="Close"
+        (onClick)="savedQueryDialogVisible = false">
+      </p-button>
+
+      <p-button
+        label="Rename"
+        [disabled]="!savedQueryName.trim() || savedQueryName.trim() === savedQueryDetails?.title"
+        (onClick)="renameCurrentSavedQuery()">
+      </p-button>
+    </ng-template>
+  </p-dialog>
+
   <div *ngIf="loading" class="spinner-overlay">
     <p-progress-spinner ariaLabel="loading" />
   </div>
@@ -167,7 +211,7 @@
     </p-button>
 
     <p-button
-      *ngIf="selectedObject == null && canSaveCurrentQuery() && !currentSavedQueryIndex()"
+      *ngIf="selectedObject == null && canSaveCurrentQueryValue && !currentSavedQueryIndexValue"
       class="map-save-query-button"
       severity="secondary"
       pTooltip="Save query"
@@ -175,6 +219,17 @@
     >
       <fa-icon [icon]="saveQueryIcon"></fa-icon>
       <label>Save Query</label>
+    </p-button>
+
+    <p-button
+      *ngIf="selectedObject == null && canSaveCurrentQueryValue && currentSavedQueryIndexValue"
+      class="map-save-query-button"
+      severity="success"
+      pTooltip="Saved query details"
+      (onClick)="openSavedQueryDialog()"
+    >
+      <fa-icon [icon]="saveQueryIcon"></fa-icon>
+      <label>{{ currentSavedQueryValue?.title ?? 'Saved Query' }}</label>
     </p-button>
   </section>
 
@@ -238,7 +293,7 @@
             <p-checkbox binary="true"
                         [ngModel]="legend.visible"
                         [inputId]="legend.label"
-                        (onChange)="toggleTypeLegend(legend)" />
+                        (onChange)="toggleTypeLegend(type, legend)" />
 
             <div class="square"
                  [ngStyle]="{ background: legend.color }">

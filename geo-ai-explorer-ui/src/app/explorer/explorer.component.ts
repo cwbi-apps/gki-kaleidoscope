@@ -34,7 +34,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ButtonModule } from 'primeng/button';
 import { LocationPage } from '../models/chat.model';
 import { TooltipModule } from 'primeng/tooltip';
-import { ExplorerSessionStateService } from '../service/explorer-session-state.service';
+import { CachedExplorerPages, ExplorerSessionStateService } from '../service/explorer-session-state.service';
 import { DialogModule } from 'primeng/dialog';
 
 export interface TypeLegend { [key: string]: { label: string, color: string, visible: boolean, included: boolean } }
@@ -114,6 +114,8 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
     onPageChange: Subscription;
 
+    onSavedQueriesChange: Subscription;
+
     onUrlStateChange?: Subscription;
 
     resolvedStyles: StyleConfig = {};
@@ -137,6 +139,9 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     public highlightedObject: GeoObject | null | undefined;
 
     private mapInitialized = false;
+    private renderScheduled = false;
+    private currentGeoObjects: GeoObject[] = [];
+    private geoObjectsByUri = new globalThis.Map<string, GeoObject>();
 
     baseLayers: any[] = [
         {
@@ -182,6 +187,12 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
     public saveQueryDialogVisible = false;
     public saveQueryName = '';
+    public savedQueryDialogVisible = false;
+    public savedQueryName = '';
+    public savedQueryDetails: CachedExplorerPages | null = null;
+    public canSaveCurrentQueryValue = false;
+    public currentSavedQueryIndexValue: number | null = null;
+    public currentSavedQueryValue: CachedExplorerPages | null = null;
 
     private restoringFromUrl = false;
 
@@ -208,8 +219,9 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.neighbors = neighbors;
                 this.resolvedStyles = styles;
                 this.zoomMap = zoomMap;
+                this.updateGeoObjectIndex();
 
-                this.render();
+                this.scheduleRender();
             });
 
         this.onVectorLayersChange = this.vectorLayers$.subscribe(() => {
@@ -226,6 +238,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.activeTab = "0";
                 this.selectObject(object, zoomMap);
                 this.resizeMapAfterLayoutChange();
+                this.updateGeoObjectIndex();
                 this.writeUrlState(this.workflowStep, { pageCacheId: this.currentPageCacheId });
             });
 
@@ -256,14 +269,17 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                     this.resultsPanelHeightPx = Math.round(window.innerHeight * 0.4);
                 }
 
+                this.updateGeoObjectIndex();
+
                 if (this.isMapWorkflowStep(step)) {
                     this.ensureMapInitialized();
 
                     if (data?.pageCacheId) {
                         this.currentPageCacheId = data.pageCacheId;
+                        this.updateCurrentQueryState();
                     }
 
-                    this.render();
+                    this.scheduleRender();
                 } else {
                     this.geoObjects = [];
                     this.destroyMap();
@@ -279,12 +295,18 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             this.resolvedStyles = styles;
             this.zoomMap = zoomMap;
             this.pages = pages;
+            this.updateGeoObjectIndex();
 
             if (this.hasResults(pages)) {
                 this.currentPageCacheId = this.explorerSessionState.cachePages(pages, 'unknown', this.currentPageCacheId);
             }
 
-            this.render();
+            this.updateCurrentQueryState();
+            this.scheduleRender();
+        });
+
+        this.onSavedQueriesChange = this.explorerSessionState.savedQueries$.subscribe(() => {
+            this.updateCurrentQueryState();
         });
     }
 
@@ -306,6 +328,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         this.onSelectedObjectChange.unsubscribe();
         this.onWorkflowStepChange.unsubscribe();
         this.onPageChange.unsubscribe();
+        this.onSavedQueriesChange.unsubscribe();
         this.onUrlStateChange?.unsubscribe();
     }
 
@@ -322,6 +345,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
         if (!view) {
             this.currentPageCacheId = undefined;
+            this.updateCurrentQueryState();
             this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.FullScreenChat }));
             this.restoringFromUrl = false;
             return;
@@ -329,10 +353,12 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
         if (pageCacheId) {
             this.currentPageCacheId = pageCacheId;
+            this.updateCurrentQueryState();
         }
 
         if (view === 'chat') {
             this.currentPageCacheId = undefined;
+            this.updateCurrentQueryState();
             this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.FullScreenChat }));
             this.restoringFromUrl = false;
             return;
@@ -513,17 +539,43 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         return this.explorerSessionState.getSavedQueryIndex(this.currentPageCacheId);
     }
 
+    private updateCurrentQueryState(): void {
+        this.canSaveCurrentQueryValue = this.canSaveCurrentQuery();
+        this.currentSavedQueryIndexValue = this.currentPageCacheId
+            ? this.explorerSessionState.getSavedQueryIndex(this.currentPageCacheId)
+            : null;
+        this.currentSavedQueryValue = this.currentSavedQueryIndexValue != null && this.currentPageCacheId
+            ? this.explorerSessionState.getCachedPages(this.currentPageCacheId)
+            : null;
+    }
+
+    currentSavedQuery(): CachedExplorerPages | null {
+        return this.currentSavedQueryValue;
+    }
+
     openSaveQueryDialog(): void {
         if (!this.currentPageCacheId) {
             return;
         }
 
-        if (this.currentSavedQueryIndex() != null) {
+        if (this.currentSavedQueryIndexValue != null) {
             return;
         }
 
         this.saveQueryName = this.explorerSessionState.getCachedPages(this.currentPageCacheId)?.title ?? '';
         this.saveQueryDialogVisible = true;
+    }
+
+    openSavedQueryDialog(): void {
+        const savedQuery = this.currentSavedQuery();
+
+        if (!savedQuery) {
+            return;
+        }
+
+        this.savedQueryDetails = savedQuery;
+        this.savedQueryName = savedQuery.title;
+        this.savedQueryDialogVisible = true;
     }
 
     saveCurrentQuery(): void {
@@ -532,8 +584,39 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         }
 
         if (this.explorerSessionState.saveCachedPages(this.currentPageCacheId, this.saveQueryName)) {
+            this.updateCurrentQueryState();
             this.saveQueryDialogVisible = false;
         }
+    }
+
+    renameCurrentSavedQuery(): void {
+        if (!this.savedQueryDetails || !this.savedQueryName.trim()) {
+            return;
+        }
+
+        this.explorerSessionState.renameSavedPages(this.savedQueryDetails.id, this.savedQueryName);
+        this.savedQueryDetails = this.explorerSessionState.getCachedPages(this.savedQueryDetails.id);
+        this.updateCurrentQueryState();
+    }
+
+    unsaveCurrentQuery(): void {
+        if (!this.savedQueryDetails) {
+            return;
+        }
+
+        this.explorerSessionState.unsaveCachedPages(this.savedQueryDetails.id);
+        this.savedQueryDialogVisible = false;
+        this.savedQueryDetails = null;
+        this.savedQueryName = '';
+        this.updateCurrentQueryState();
+    }
+
+    formatSavedQueryDate(query: CachedExplorerPages | null): string {
+        if (!query) {
+            return '';
+        }
+
+        return new Date(query.savedAt ?? query.updatedAt).toLocaleString();
     }
 
     onResultsHeightChange(heightPx: number): void {
@@ -545,7 +628,10 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     onResultsCollapsedChange(collapsed: boolean): void {
         this.resultsCollapsed = collapsed;
         this.resizeMapAfterLayoutChange();
-        this.render();
+
+        if (this.workflowStep === WorkflowStep.InspectObject) {
+            this.scheduleRender();
+        }
     }
 
     openResultsForType(type: string, event?: Event): void {
@@ -555,7 +641,10 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         this.resultsCollapsed = false;
         this.resultsPanelHeightPx = this.getExpandedResultsPanelHeight();
         this.resizeMapAfterLayoutChange();
-        this.render();
+
+        if (this.workflowStep === WorkflowStep.InspectObject) {
+            this.scheduleRender();
+        }
     }
 
     private getExpandedResultsPanelHeight(): number {
@@ -716,6 +805,8 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     render(): void {
+        this.renderScheduled = false;
+
         if (this.initialized) {
             // Clear the map
             this.clearAllMapData();
@@ -740,6 +831,18 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
             this.renderedObjects = this.allGeoObjects().map(obj => obj.properties.uri);
         }
+    }
+
+    private scheduleRender(): void {
+        if (this.renderScheduled) {
+            return;
+        }
+
+        this.renderScheduled = true;
+
+        requestAnimationFrame(() => {
+            this.render();
+        });
     }
 
 
@@ -767,9 +870,26 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         });
     }
 
-    toggleTypeLegend(legend: any): void {
+    toggleTypeLegend(type: string, legend: any): void {
         legend.visible = !legend.visible;
-        this.render();
+        this.setTypeLayerVisibility(type, legend.visible);
+    }
+
+    private setTypeLayerVisibility(type: string, visible: boolean): void {
+        if (!this.map) {
+            return;
+        }
+
+        const visibility = visible ? 'visible' : 'none';
+        [type, `${type}-LABEL`, `hover-${type}`].forEach(layerId => {
+            if (this.map?.getLayer(layerId)) {
+                this.map.setLayoutProperty(layerId, 'visibility', visibility);
+            }
+        });
+
+        if (!visible && this.highlightedObject?.properties.type === type) {
+            this.highlightObject(undefined);
+        }
     }
 
     labelForType(typeUri: string): string {
@@ -1194,6 +1314,17 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     allGeoObjects(): GeoObject[] {
+        return this.currentGeoObjects;
+    }
+
+    private updateGeoObjectIndex(): void {
+        this.currentGeoObjects = this.buildCurrentGeoObjects();
+        this.geoObjectsByUri = new globalThis.Map(
+            this.currentGeoObjects.map(obj => [obj.properties.uri, obj])
+        );
+    }
+
+    private buildCurrentGeoObjects(): GeoObject[] {
         if (this.workflowStep === WorkflowStep.InspectObject && this.resultsCollapsed) {
             return this.uniqueGeoObjects(this.neighbors.concat(this.selectedObject ? [this.selectedObject] : []));
         }
@@ -1204,6 +1335,14 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             all.push(this.selectedObject);
 
         return this.uniqueGeoObjects(all);
+    }
+
+    private getGeoObjectByUri(uri: string | null | undefined): GeoObject | undefined {
+        if (uri == null) {
+            return undefined;
+        }
+
+        return this.geoObjectsByUri.get(uri);
     }
 
     private uniqueGeoObjects(objects: GeoObject[]): GeoObject[] {
@@ -1524,7 +1663,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
         if (feature) {
             const uri = feature.properties['uri'];
-            const highlightedObject = this.allGeoObjects().find(go => go.properties.uri === uri);
+            const highlightedObject = this.getGeoObjectByUri(uri);
             this.store.dispatch(ExplorerActions.highlightGeoObject({ object: highlightedObject! }));
             this.map!.getCanvas().style.cursor = 'pointer';
         } else {
@@ -1612,7 +1751,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                     const feature = features.find(f => f.properties['uri'] != null);
                     const uri = feature?.properties["uri"];
 
-                    let selectedObject = this.allGeoObjects().find(n => n.properties.uri === uri);
+                    let selectedObject = this.getGeoObjectByUri(uri);
 
                     if (selectedObject) {
                         this.store.dispatch(ExplorerActions.appendWorkflowStep({
@@ -1642,7 +1781,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         if (uri != null && this.selectedObject != null && uri == this.selectedObject.properties.uri) return;
 
         let oldHighlight = this.highlightedObject;
-        let newHighlight = (uri == null) ? null : this.allGeoObjects().find(go => go.properties.uri === uri);
+        let newHighlight = this.getGeoObjectByUri(uri) ?? null;
 
         if (oldHighlight != null) {
             this.map!.setFilter("hover-" + oldHighlight.properties.type, ["all", ["==", "uri", "NONE"] ]);
@@ -1663,9 +1802,10 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             // If its already selected do nothing
             if (this.selectedObject != null && this.selectedObject.properties.uri === geoObject.properties.uri) return;
 
-            let go = this.allGeoObjects().find(go => go.properties.uri === geoObject.properties.uri);
+            let go = this.getGeoObjectByUri(geoObject.properties.uri);
 
             this.selectedObject = geoObject;
+            this.updateGeoObjectIndex();
 
             if (go == null) {
                 this.render();
@@ -1690,6 +1830,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             // }
         } else {
             this.selectedObject = undefined;
+            this.updateGeoObjectIndex();
         }
 
         if (previousSelected != null) {
