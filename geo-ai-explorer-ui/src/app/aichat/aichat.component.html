@@ -128,7 +128,7 @@
           <span class="query-actions">
             <span
               class="query-action"
-              title="View query"
+              title="View on Map"
               (click)="viewCachedQuery(query); $event.stopPropagation()">
               <fa-icon [icon]="viewQueryIcon"></fa-icon>
             </span>
@@ -230,7 +230,7 @@
               <div class="action mappable-actions" *ngIf="msg.mappable">
                 <p-button (onClick)="mapIt(msg)">
                   <fa-icon [icon]="mapIcon"></fa-icon>
-                  Map It
+                  View on Map
                 </p-button>
 
                 <p-button

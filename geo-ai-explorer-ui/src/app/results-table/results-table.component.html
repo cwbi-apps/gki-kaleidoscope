@@ -74,7 +74,15 @@
               {{ shouldShowTypeColumn(item.page) ? 'Results' : getPageTypeLabel(item.page) }}
             </h3>
 
-            <div class="results-table-body">
+            <div
+              class="results-table-body"
+              [class.loading]="isPageLoading(item)"
+              [attr.aria-busy]="isPageLoading(item)"
+            >
+              <div class="results-table-loading-overlay" *ngIf="isPageLoading(item)">
+                <p-progress-spinner ariaLabel="Loading results" />
+              </div>
+
               <p-table
                 [value]="item.page.locations"
                 [tableStyle]="{ 'min-width': '100%' }"
@@ -86,8 +94,20 @@
               >
                 <ng-template #header>
                   <tr>
-                    <th *ngFor="let column of item.columns">
-                      {{ column.header }}
+                    <th
+                      *ngFor="let column of item.columns"
+                      [attr.aria-sort]="getColumnAriaSort(item, column)"
+                    >
+                      <button
+                        type="button"
+                        class="results-sort-button"
+                        [class.sorted]="isColumnSorted(item, column)"
+                        [disabled]="isPageLoading(item)"
+                        (click)="onColumnSort(item, column)"
+                      >
+                        <span>{{ column.header }}</span>
+                        <fa-icon [icon]="getSortIcon(item, column)"></fa-icon>
+                      </button>
                     </th>
                   </tr>
                 </ng-template>
@@ -108,6 +128,7 @@
             </div>
 
             <p-paginator
+              *ngIf="!isPageLoading(item)"
               styleClass="compact-paginator"
               (onPageChange)="onPageChange($event, item.index)"
               [first]="item.page.offset"

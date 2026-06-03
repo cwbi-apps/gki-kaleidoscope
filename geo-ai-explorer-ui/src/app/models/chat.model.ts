@@ -40,5 +40,7 @@ export interface LocationPage {
   limit: number;
   offset: number;
   count: number;
+  sortField?: string | null;
+  sortDirection?: 'asc' | 'desc' | null;
   availableTypes?: TypeSummary[];
 }

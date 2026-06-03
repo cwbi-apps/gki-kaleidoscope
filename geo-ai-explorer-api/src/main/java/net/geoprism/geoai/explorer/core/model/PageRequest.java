@@ -21,4 +21,8 @@ public class PageRequest
   private int            limit  = 1000;
 
   private List<String>   excludedTypes = new LinkedList<>();
+  
+  private String         sortField;
+  
+  private String         sortDirection;
 }

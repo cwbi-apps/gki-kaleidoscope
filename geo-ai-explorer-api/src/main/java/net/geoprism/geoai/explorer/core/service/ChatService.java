@@ -201,6 +201,11 @@ public class ChatService
 
   public LocationPage getPage(String statement, String type, int offset, int limit, List<String> excludedTypes)
   {
+    return this.getPage(statement, type, offset, limit, excludedTypes, null, null);
+  }
+
+  public LocationPage getPage(String statement, String type, int offset, int limit, List<String> excludedTypes, String sortField, String sortDirection)
+  {
     try
     {
       boolean combinedPage = type == null || type.isBlank();
@@ -210,11 +215,13 @@ public class ChatService
 
       LocationPage page = new LocationPage();
       page.setType(combinedPage ? null : type);
-      page.setLocations(this.graph.query(pageStatement, offset, limit));
+      page.setLocations(this.graph.query(pageStatement, offset, limit, sortField, sortDirection));
       page.setCount(this.graph.getCount(pageStatement));
       page.setLimit(limit);
       page.setOffset(offset);
       page.setStatement(statement);
+      page.setSortField(sortField);
+      page.setSortDirection(sortDirection);
 
       if (combinedPage)
       {

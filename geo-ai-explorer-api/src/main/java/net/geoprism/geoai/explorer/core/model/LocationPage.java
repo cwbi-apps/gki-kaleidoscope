@@ -24,4 +24,8 @@ public class LocationPage
   private long              offset = 0;
 
   private int               limit  = 1000;
+  
+  private String            sortField;
+  
+  private String            sortDirection;
 }

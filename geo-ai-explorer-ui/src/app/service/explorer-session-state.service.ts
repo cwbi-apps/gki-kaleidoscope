@@ -121,12 +121,14 @@ export class ExplorerSessionStateService {
     }
   }
 
-  getOrCreatePageRequestId(statement: string, type: string | null, offset: number, limit: number, excludedTypes: string[] = []): string {
+  getOrCreatePageRequestId(statement: string, type: string | null, offset: number, limit: number, excludedTypes: string[] = [], sortField?: string | null, sortDirection?: string | null): string {
     return [
       'page-query',
       this.hash(statement),
       this.hash(type ?? ''),
       this.hash(JSON.stringify([...excludedTypes].sort())),
+      this.hash(sortField ?? ''),
+      this.hash(sortDirection ?? ''),
       offset,
       limit
     ].join('.');

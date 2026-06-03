@@ -161,7 +161,8 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     private mapInitialized = false;
     private mapInitScheduled = false;
     private renderScheduled = false;
-    private zoomInspectorMapOnNextRender = false;
+    private zoomMapToExtentOnNextRender = false;
+    private zoomMapToExtentRetries = 0;
     private mapResizeScheduled = false;
     private mapSyncScheduled = false;
     private mapElement?: ElementRef<HTMLElement>;
@@ -233,6 +234,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     private restoringFromUrl = false;
 
     private urlStateReady = false;
+    private initialUrlRestorePending = true;
 
     private lastUrlSignature = "";
 
@@ -258,7 +260,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.updateGeoObjectIndex();
 
                 if (this.isInspectorWorkflowStep() && this.isInspectorPaneActive('map')) {
-                    this.zoomInspectorMapOnNextRender = true;
+                    this.requestZoomMapToExtent();
                 }
 
                 this.scheduleRender();
@@ -278,7 +280,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.activeTab = "0";
                 this.selectObject(object, zoomMap);
                 if (this.isInspectorWorkflowStep() && this.isInspectorPaneActive('map')) {
-                    this.zoomInspectorMapOnNextRender = true;
+                    this.requestZoomMapToExtent();
                 }
                 this.resizeMapAfterLayoutChange();
                 this.updateGeoObjectIndex();
@@ -294,6 +296,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             )
             .pipe(withLatestFrom(this.styles$, this.zoomMap$))
             .subscribe(([{ step, data, }, styles, zoomMap]) => {
+                const previousStep = this.workflowStep;
                 this.activeTab = "0";
                 this.resolvedStyles = styles;
                 this.workflowStep = step;
@@ -315,6 +318,13 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.updateGeoObjectIndex();
 
                 if (this.shouldShowMapForWorkflow(step)) {
+                    if (
+                        (previousStep === WorkflowStep.InspectObject || previousStep === WorkflowStep.ViewNeighbors) &&
+                        (step === WorkflowStep.MapAndResults || step === WorkflowStep.MinimizeChat || step === WorkflowStep.DisambiguateObject)
+                    ) {
+                        this.requestZoomMapToExtent();
+                    }
+
                     this.ensureMapInitialized();
 
                     if (data?.pageCacheId) {
@@ -356,7 +366,15 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.urlStateReady = true;
         this.onUrlStateChange = this.route.queryParamMap.subscribe(params => {
-            this.restoreWorkflowFromUrl(params.get('view'), params.get('state'), params.get('inspect') ?? params.get('uri'));
+            const allowRestoreZoom = this.initialUrlRestorePending;
+            this.initialUrlRestorePending = false;
+
+            this.restoreWorkflowFromUrl(
+                params.get('view'),
+                params.get('state'),
+                params.get('inspect') ?? params.get('uri'),
+                allowRestoreZoom
+            );
         });
 
         this.configurationService.get().then(configuration => {
@@ -375,7 +393,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         this.onUrlStateChange?.unsubscribe();
     }
 
-    private restoreWorkflowFromUrl(view: string | null, pageCacheId: string | null, inspectUri: string | null): void {
+    private restoreWorkflowFromUrl(view: string | null, pageCacheId: string | null, inspectUri: string | null, allowRestoreZoom = false): void {
         const signature = this.urlSignature(view, pageCacheId, inspectUri);
 
         if (signature === this.lastUrlSignature) {
@@ -408,7 +426,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         }
 
         if (view === 'inspect' && inspectUri) {
-            this.restoreInspectObjectFromUrl(inspectUri, pageCacheId ?? undefined);
+            this.restoreInspectObjectFromUrl(inspectUri, pageCacheId ?? undefined, allowRestoreZoom);
             return;
         }
 
@@ -428,6 +446,10 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         }
 
         if (cachedPages && step === WorkflowStep.MinimizeChat) {
+            if (allowRestoreZoom) {
+                this.requestZoomMapToExtent();
+            }
+
             this.store.dispatch(ExplorerActions.setPages({
                 pages: cachedPages,
                 zoomMap: false
@@ -439,6 +461,10 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             }));
         }
         else if (cachedPages && (step === WorkflowStep.MapAndResults || step === WorkflowStep.DisambiguateObject)) {
+            if (allowRestoreZoom) {
+                this.requestZoomMapToExtent();
+            }
+
             this.store.dispatch(ExplorerActions.showPagesOnMap({
                 pages: cachedPages,
                 zoomMap: false,
@@ -455,10 +481,14 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         this.restoringFromUrl = false;
     }
 
-    private restoreInspectObjectFromUrl(uri: string, pageCacheId?: string): void {
+    private restoreInspectObjectFromUrl(uri: string, pageCacheId?: string, allowRestoreZoom = false): void {
         const cachedPages = this.explorerSessionState.getPages(pageCacheId);
 
         if (cachedPages) {
+            if (allowRestoreZoom) {
+                this.requestZoomMapToExtent();
+            }
+
             this.store.dispatch(ExplorerActions.setPages({
                 pages: cachedPages,
                 zoomMap: false
@@ -816,7 +846,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
             if (this.shouldShowMapForWorkflow(this.workflowStep)) {
                 if (this.isInspectorWorkflowStep()) {
-                    this.zoomInspectorMapOnNextRender = true;
+                    this.requestZoomMapToExtent();
                 }
 
                 this.ensureMapInitialized();
@@ -983,9 +1013,17 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
             this.mapGeoObjects();
 
-            if (this.zoomMap || this.zoomInspectorMapOnNextRender) {
-                this.zoomToAll();
-                this.zoomInspectorMapOnNextRender = false;
+            if (this.zoomMap || this.zoomMapToExtentOnNextRender) {
+                const zoomed = this.zoomToAll();
+
+                if (zoomed) {
+                    this.zoomMapToExtentOnNextRender = false;
+                    this.zoomMapToExtentRetries = 0;
+                }
+                else if (this.zoomMapToExtentOnNextRender && this.zoomMapToExtentRetries > 0) {
+                    this.zoomMapToExtentRetries--;
+                    this.scheduleRender();
+                }
             }
 
             this.renderHighlights();
@@ -1004,6 +1042,11 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         requestAnimationFrame(() => {
             this.render();
         });
+    }
+
+    private requestZoomMapToExtent(retries = 12): void {
+        this.zoomMapToExtentOnNextRender = true;
+        this.zoomMapToExtentRetries = Math.max(this.zoomMapToExtentRetries, retries);
     }
 
 
@@ -1586,23 +1629,31 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     /*
      * Fit the map to the bounds of all of the layers
      */
-    zoomToAll() {
-        if (this.allGeoObjects().length > 0) {
+    zoomToAll(): boolean {
+        if (!this.map || this.allGeoObjects().length === 0) {
+            return false;
+        }
 
-            const layerBounds = this.orderedTypes.map(type => {
-                // TODO: Is there a better way to get the layer data from the map?
-                const source = this.map?.getSource(type);
+        const layerBounds = this.orderedTypes.map(type => {
+            // TODO: Is there a better way to get the layer data from the map?
+            const source = this.map?.getSource(type);
 
-                if (source instanceof GeoJSONSource) {
-                    const data = ((source as GeoJSONSource)._data) as AllGeoJSON;
-                    return bboxPolygon(bbox(data))
+            if (source instanceof GeoJSONSource) {
+                const data = ((source as GeoJSONSource)._data) as AllGeoJSON;
+
+                if ((data as any)?.features?.length > 0) {
+                    return bboxPolygon(bbox(data));
                 }
+            }
 
-                return null;
-            }).filter(a => a != null)
+            return null;
+        }).filter(a => a != null)
 
-            if (layerBounds.length == 0) return;
+        if (layerBounds.length === 0) {
+            return false;
+        }
 
+        try {
             const allBounds = bbox(layerBounds.reduce((a: any, b: any) => {
                 if (a == null) {
                     return b;
@@ -1620,7 +1671,13 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 }
             }, null)) as LngLatBoundsLike
 
-            this.map?.fitBounds(allBounds, { padding: 50 })
+            this.map.fitBounds(allBounds, { padding: 50 });
+
+            return true;
+        }
+        catch (error) {
+            console.warn('Unable to zoom to layer extent yet.', error);
+            return false;
         }
     }
 

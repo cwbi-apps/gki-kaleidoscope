@@ -304,6 +304,7 @@ fa-icon {
 }
 
 .results-table-body {
+  position: relative;
   height: 100%;
   min-height: 0;
 
@@ -311,6 +312,28 @@ fa-icon {
     Let PrimeNG's internal p-datatable-wrapper handle vertical scrolling.
   */
   overflow: hidden;
+}
+
+.results-table-body.loading ::ng-deep .p-datatable {
+  opacity: 0.35;
+}
+
+.results-table-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.68);
+  pointer-events: all;
+}
+
+.results-table-loading-overlay ::ng-deep .p-progressspinner {
+  width: 2.5rem;
+  height: 2.5rem;
 }
 
 .results-table-body ::ng-deep p-table {
@@ -329,6 +352,56 @@ fa-icon {
 .results-table-body ::ng-deep .p-datatable-wrapper {
   flex: 1 1 0;
   min-height: 0;
+}
+
+.results-sort-button {
+  width: 100%;
+  min-width: 0;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+
+  border: 0;
+  background: transparent;
+  color: inherit;
+
+  padding: 0;
+
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.results-sort-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.results-sort-button fa-icon {
+  flex: 0 0 auto;
+  color: var(--text-color-secondary, #64748b);
+  opacity: 0.55;
+}
+
+.results-sort-button.sorted fa-icon,
+.results-sort-button:hover fa-icon {
+  opacity: 1;
+  color: var(--primary-color, #3b82f6);
+}
+
+.results-sort-button:focus-visible {
+  outline: 2px solid var(--primary-color, #3b82f6);
+  outline-offset: 2px;
+}
+
+.results-sort-button:disabled {
+  cursor: wait;
 }
 
 p-paginator {

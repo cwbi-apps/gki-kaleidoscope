@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 
 import { TableModule } from 'primeng/table';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { GeoObject } from '../models/geoobject.model';
 import { Observable, Subscription, take } from 'rxjs';
@@ -15,17 +16,15 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
     faThumbtack,
     faChevronDown,
-    faChevronUp
+    faChevronUp,
+    faSort,
+    faSortUp,
+    faSortDown
 } from '@fortawesome/free-solid-svg-icons';
 import { FormsModule } from '@angular/forms';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { TooltipModule } from 'primeng/tooltip';
 import { TabsModule } from 'primeng/tabs';
-
-interface PageDisplayItem {
-  page: LocationPage;
-  index: number;
-}
 
 interface PageDisplayColumn {
     field: string;
@@ -36,6 +35,7 @@ interface PageDisplayItem {
     page: LocationPage;
     index: number;
     columns: PageDisplayColumn[];
+    loading?: boolean;
 }
 
 interface PageDisplayOption {
@@ -44,9 +44,16 @@ interface PageDisplayOption {
     count: number;
 }
 
+type SortDirection = 'asc' | 'desc';
+
+interface PageSort {
+    field: string;
+    direction: SortDirection;
+}
+
 @Component({
     selector: 'results-table',
-    imports: [TableModule, PaginatorModule, LetDirective, CommonModule, FontAwesomeModule, FormsModule, MultiSelectModule, TooltipModule, TabsModule],
+    imports: [TableModule, PaginatorModule, ProgressSpinnerModule, LetDirective, CommonModule, FontAwesomeModule, FormsModule, MultiSelectModule, TooltipModule, TabsModule],
     templateUrl: './results-table.component.html',
     styleUrl: './results-table.component.scss',
 })
@@ -63,6 +70,9 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
     pinIcon = faThumbtack;
     public collapseIcon = faChevronDown;
     public expandIcon = faChevronUp;
+    public sortIcon = faSort;
+    public sortUpIcon = faSortUp;
+    public sortDownIcon = faSortDown;
 
     pages$: Observable<LocationPage[]> = this.store.select(getPages);
 
@@ -87,6 +97,8 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
 
     activePageDisplayKey: string = '';
     pinnedPageDisplayKeys: string[] = [];
+    private pageSortsByDisplayKey = new Map<string, PageSort>();
+    private loadingPageDisplayKeys = new Set<string>();
 
     private _collapsed = false;
 
@@ -228,9 +240,16 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
 
         const uniqueDisplayKeys = Array.from(new Set(displayKeys));
 
-        this.displayedPageItems = pageItems.filter(item =>
+        const displayedItems = pageItems.filter(item =>
             uniqueDisplayKeys.includes(this.getPageDisplayKey(item.page, item.index))
         );
+
+        const displayedKeys = new Set(displayedItems.map(item => this.getPageDisplayKey(item.page, item.index)));
+        const loadingItems = uniqueDisplayKeys
+            .filter(key => !displayedKeys.has(key) && this.loadingPageDisplayKeys.has(key))
+            .map(key => this.createLoadingPageItem(key, availableTypes));
+
+        this.displayedPageItems = [...displayedItems, ...loadingItems];
     }
 
     onPageChange(state: PaginatorState, pageIndex: number): void {
@@ -241,12 +260,82 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
                 return;
             }
 
+            const sort = this.getPageSort(currentPage, pageIndex);
+            const key = this.getPageDisplayKey(currentPage, pageIndex);
+
+            this.beginPageLoading(key);
+
             this.chatService
-                .getPage(currentPage.statement, currentPage.type, state.first ?? 0, state.rows ?? currentPage.limit)
+                .getPage(currentPage.statement, currentPage.type, state.first ?? 0, state.rows ?? currentPage.limit, [], sort?.field, sort?.direction)
                 .then(nextPage => {
-                    this.updatePagesWithTypePage(pages, nextPage);
-                });
+                    return this.updatePagesWithTypePage(pages, nextPage);
+                })
+                .catch(error => console.error('Failed to load results page.', error))
+                .finally(() => this.endPageLoading(key));
         });
+    }
+
+    onColumnSort(item: PageDisplayItem, column: PageDisplayColumn): void {
+        const key = this.getPageDisplayKey(item.page, item.index);
+        const currentSort = this.pageSortsByDisplayKey.get(key);
+        const nextDirection: SortDirection = currentSort?.field === column.field && currentSort.direction === 'asc'
+            ? 'desc'
+            : 'asc';
+
+        this.pageSortsByDisplayKey.set(key, {
+            field: column.field,
+            direction: nextDirection
+        });
+        this.beginPageLoading(key);
+
+        this.pages$.pipe(take(1)).subscribe(pages => {
+            const currentPage = pages[item.index];
+
+            if (!currentPage?.type) {
+                this.endPageLoading(key);
+                return;
+            }
+
+            this.chatService
+                .getPage(currentPage.statement, currentPage.type, 0, currentPage.limit, [], column.field, nextDirection)
+                .then(nextPage => {
+                    return this.updatePagesWithTypePage(pages, nextPage);
+                })
+                .catch(error => console.error('Failed to sort results page.', error))
+                .finally(() => this.endPageLoading(key));
+        });
+    }
+
+    getSortIcon(item: PageDisplayItem, column: PageDisplayColumn) {
+        const sort = this.getPageSort(item.page, item.index);
+
+        if (sort?.field !== column.field) {
+            return this.sortIcon;
+        }
+
+        return sort.direction === 'asc'
+            ? this.sortUpIcon
+            : this.sortDownIcon;
+    }
+
+    getColumnAriaSort(item: PageDisplayItem, column: PageDisplayColumn): 'ascending' | 'descending' | 'none' {
+        const sort = this.getPageSort(item.page, item.index);
+
+        if (sort?.field !== column.field) {
+            return 'none';
+        }
+
+        return sort.direction === 'asc'
+            ? 'ascending'
+            : 'descending';
+    }
+
+    isColumnSorted(item: PageDisplayItem, column: PageDisplayColumn): boolean {
+        return this.getPageSort(item.page, item.index)?.field === column.field;
+    }
+
+    isPageLoading(item: PageDisplayItem): boolean {
+        return !!item.loading || this.loadingPageDisplayKeys.has(this.getPageDisplayKey(item.page, item.index));
     }
 
     selectActivePage(key: string | number): void {
@@ -344,17 +433,25 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
                 return;
             }
 
+            this.beginPageLoading(type);
+
             this.chatService
-                .getPage(combinedPage.statement, type, 0, combinedPage.limit)
-                .then(typePage => this.updatePagesWithTypePage(pages, typePage));
+                .getPage(combinedPage.statement, type, 0, combinedPage.limit, [], this.pageSortsByDisplayKey.get(type)?.field, this.pageSortsByDisplayKey.get(type)?.direction)
+                .then(typePage => this.updatePagesWithTypePage(pages, typePage))
+                .catch(error => console.error('Failed to load results table.', error))
+                .finally(() => this.endPageLoading(type));
         });
     }
 
-    private updatePagesWithTypePage(pages: LocationPage[], typePage: LocationPage): void {
+    private getPageSort(page: LocationPage, index: number): PageSort | undefined {
+        return this.pageSortsByDisplayKey.get(this.getPageDisplayKey(page, index));
+    }
+
+    private updatePagesWithTypePage(pages: LocationPage[], typePage: LocationPage): Promise<void> {
         const combinedPage = this.getCombinedPage(pages);
 
         if (!combinedPage) {
-            return;
+            return Promise.resolve();
         }
 
         const loadedTypePages = pages
@@ -364,7 +461,7 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
             .map(page => page.type)
             .filter((type): type is string => type != null && type.trim() !== '');
 
-        this.chatService
+        return this.chatService
             .getPage(combinedPage.statement, null, combinedPage.offset, combinedPage.limit, excludedTypes)
             .then(nextCombinedPage => {
                 nextCombinedPage.availableTypes = combinedPage.availableTypes ?? nextCombinedPage.availableTypes;
@@ -373,7 +470,38 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
                     pages: [nextCombinedPage, ...loadedTypePages],
                     zoomMap: true
                 }));
-            });
+            })
+            .catch(error => console.error('Failed to refresh combined results page.', error));
+    }
+
+    private beginPageLoading(key: string): void {
+        this.loadingPageDisplayKeys.add(key);
+        this.rebuildPageDisplayState();
+    }
+
+    private endPageLoading(key: string): void {
+        this.loadingPageDisplayKeys.delete(key);
+        this.rebuildPageDisplayState();
+    }
+
+    private createLoadingPageItem(key: string, availableTypes: TypeSummary[]): PageDisplayItem {
+        const combinedPage = this.getCombinedPage(this.latestPages);
+        const typeSummary = availableTypes.find(type => type.type === key);
+
+        return {
+            page: {
+                statement: combinedPage?.statement ?? '',
+                type: key,
+                locations: [],
+                limit: combinedPage?.limit ?? 100,
+                offset: 0,
+                count: typeSummary?.count ?? 0,
+                availableTypes: combinedPage?.availableTypes
+            },
+            index: -1,
+            columns: [{ field: 'label', header: 'Label' }],
+            loading: true
+        };
     }
 
     ensureValidActiveAndPinnedPages(availableTypes: TypeSummary[]): void {

@@ -234,6 +234,7 @@
 
         <div class="object-pane-body" *ngSwitchCase="'map'">
           <div #mapElement id="map"></div>
+          <ng-container *ngTemplateOutlet="legendPanelTemplate"></ng-container>
         </div>
 
         <div class="object-pane-body" *ngSwitchCase="'attributes'">
@@ -320,6 +321,8 @@
       <fa-icon [icon]="saveQueryIcon"></fa-icon>
       <label>{{ currentSavedQueryValue?.title ?? 'Saved Query' }}</label>
     </p-button>
+
+    <ng-container *ngTemplateOutlet="legendPanelTemplate"></ng-container>
   </section>
 
   <!-- Results / Disambiguation Body -->
@@ -359,12 +362,13 @@
   </section>
 
   <!-- Legend -->
-  <p-panel *ngIf="
-             workflowStep === WorkflowStep.MapAndResults ||
-             workflowStep === WorkflowStep.MinimizeChat ||
-             (workflowStep === WorkflowStep.InspectObject && isInspectorPaneActive('map')) ||
-             (workflowStep === WorkflowStep.ViewNeighbors && isInspectorPaneActive('map'))
-           "
+  <ng-template #legendPanelTemplate>
+    <p-panel *ngIf="
+               workflowStep === WorkflowStep.MapAndResults ||
+               workflowStep === WorkflowStep.MinimizeChat ||
+               (workflowStep === WorkflowStep.InspectObject && isInspectorPaneActive('map')) ||
+               (workflowStep === WorkflowStep.ViewNeighbors && isInspectorPaneActive('map'))
+             "
            [toggleable]="true"
            header="Layers"
            [(collapsed)]="legendCollapsed"
@@ -429,5 +433,6 @@
         </label>
       </div>
     </div>
-  </p-panel>
+    </p-panel>
+  </ng-template>
 </div>

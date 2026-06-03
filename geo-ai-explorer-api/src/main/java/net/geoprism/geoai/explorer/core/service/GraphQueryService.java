@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -217,6 +218,11 @@ public class GraphQueryService
 
   public List<Location> query(String statement, int offset, int limit)
   {
+    return this.query(statement, offset, limit, null, null);
+  }
+
+  public List<Location> query(String statement, int offset, int limit, String sortField, String sortDirection)
+  {
     // The agent sometimes includes formatting text. Just remove it...
     String sparql = normalizeLocationStatement(statement);
 
@@ -224,18 +230,14 @@ public class GraphQueryService
     sparql = sparql.replaceAll("(?i)LIMIT\\s+\\d+", "");
     sparql = sparql.replaceAll("(?i)OFFSET\\s+\\d+", "");
 
-    // Append ORDER BY, which must come before the limit
-    if (!sparql.toUpperCase().contains("ORDER BY"))
-    {
-      sparql += " ORDER BY ASC(?label)";
-    }
+    sparql = applySort(sparql, sortField, sortDirection);
 
     // Append new LIMIT and OFFSET
     sparql += " LIMIT " + limit + " OFFSET " + offset;
 
     try (RDFConnection conn = this.createConnection())
     {
-      LinkedList<Location> results = new LinkedList<>();
+      Map<String, Location> resultsByUri = new LinkedHashMap<>();
 
       System.out.println("JenaService.query - EXECUTING QUERY");
       System.out.println(sparql);
@@ -274,11 +276,88 @@ public class GraphQueryService
           }
         });
 
-        results.add(location);
+        resultsByUri.putIfAbsent(uri, location);
       });
 
-      return results;
+      return new LinkedList<>(resultsByUri.values());
     }
+  }
+
+  private String applySort(String sparql, String sortField, String sortDirection)
+  {
+    String field = sanitizeSortField(sortField);
+    boolean descending = "desc".equalsIgnoreCase(sortDirection);
+
+    if (StringUtils.isBlank(field))
+    {
+      return sparql + " ORDER BY ASC(?label)";
+    }
+
+    String sortedSparql = injectSortValueBinding(sparql, field);
+    String direction = descending ? "DESC" : "ASC";
+
+    return sortedSparql + " ORDER BY ASC(!BOUND(?__sortValue)) " + direction + "(?__sortValue) ASC(?label) ASC(?uri)";
+  }
+
+  private String sanitizeSortField(String sortField)
+  {
+    if (StringUtils.isBlank(sortField))
+    {
+      return null;
+    }
+
+    String field = sortField.trim();
+    field = field.replaceFirst("^.*[#/]", "");
+
+    if (field.contains("-"))
+    {
+      field = field.substring(field.lastIndexOf('-') + 1);
+    }
+
+    return field.replaceAll("[^A-Za-z0-9_]", "");
+  }
+
+  private boolean isSafeSparqlVariableName(String field)
+  {
+    return Pattern.matches("[A-Za-z_][A-Za-z0-9_]*", field);
+  }
+
+  private String injectSortValueBinding(String sparql, String field)
+  {
+    int whereIndex = indexOfKeyword(sparql, "WHERE");
+
+    if (whereIndex == -1)
+    {
+      return sparql;
+    }
+
+    int openBrace = sparql.indexOf('{', whereIndex);
+
+    if (openBrace == -1)
+    {
+      return sparql;
+    }
+
+    int closeBrace = findMatchingBrace(sparql, openBrace);
+
+    if (closeBrace == -1)
+    {
+      return sparql;
+    }
+
+    String projectedValue = isSafeSparqlVariableName(field)
+        ? "?" + field + ", "
+        : "";
+
+    String binding = "\n  OPTIONAL {\n" +
+        "    ?uri ?__sortPredicate ?__sortAttributeValue .\n" +
+        "    BIND(REPLACE(STR(?__sortPredicate), \"^.*[#/]\", \"\") AS ?__sortPredicateLocal) .\n" +
+        "    BIND(REPLACE(?__sortPredicateLocal, \"^.*-\", \"\") AS ?__sortPredicateName) .\n" +
+        "    FILTER(?__sortPredicateName = \"" + escapeSparqlString(field) + "\") .\n" +
+        "  }\n" +
+        "  BIND(COALESCE(" + projectedValue + "?__sortAttributeValue) AS ?__sortValue) .\n";
+
+    return sparql.substring(0, closeBrace) + binding + sparql.substring(closeBrace);
   }
 
   private String readUri(QuerySolution qs)
@@ -361,7 +440,7 @@ public class GraphQueryService
   {
     return switch (varName)
     {
-      case "uri", "resource", "subject", "s", "id", "location", "object", "type", "code", "label", "wkt" -> true;
+      case "uri", "resource", "subject", "s", "id", "location", "object", "type", "code", "label", "wkt", "__sortPredicate", "__sortValue", "__sortAttributeValue", "__sortPredicateLocal", "__sortPredicateName" -> true;
       default -> false;
     };
   }
@@ -582,7 +661,7 @@ public class GraphQueryService
     }
 
     String prefixAndDataset = clean.substring(0, selectIndex) +
-        "SELECT ?uri ?type ?code ?label ?wkt\n" +
+        "SELECT DISTINCT ?uri ?type ?code ?label ?wkt\n" +
         clean.substring(indexAfterProjection(clean, selectIndex), whereIndex);
     String whereBlock = clean.substring(whereIndex, closeBrace);
     String projection = clean.substring(selectIndex, whereIndex);
@@ -1004,6 +1083,11 @@ public class GraphQueryService
   private static String escapeSparqlIri(String iri)
   {
     return iri.replace("\\", "\\\\").replace(">", "%3E");
+  }
+
+  private static String escapeSparqlString(String value)
+  {
+    return value.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
   private static String exclusionFor(String varName, List<String> excludedTypes)

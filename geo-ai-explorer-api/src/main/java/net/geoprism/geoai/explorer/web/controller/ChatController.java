@@ -63,7 +63,7 @@ public class ChatController
   @ResponseBody
   public ResponseEntity<LocationPage> getPage(@RequestBody PageRequest page)
   {
-    LocationPage response = this.service.getPage(page.getStatement(), page.getType(), page.getOffset(), page.getLimit(), page.getExcludedTypes());
+    LocationPage response = this.service.getPage(page.getStatement(), page.getType(), page.getOffset(), page.getLimit(), page.getExcludedTypes(), page.getSortField(), page.getSortDirection());
 
     return new ResponseEntity<LocationPage>(response, HttpStatus.OK);
   }
