@@ -265,10 +265,14 @@
         <fa-icon [icon]="icon"></fa-icon>
       </p-button>
 
-      <input
-        type="text"
+      <textarea
+        #messageInput
         [(ngModel)]="message"
-        placeholder="Type a message..." />
+        rows="1"
+        placeholder="Type a message..."
+        (input)="resizeMessageInput(messageInput)"
+        (keydown)="onMessageKeydown($event)">
+      </textarea>
 
       <p-button
         class="btn btn-primary"

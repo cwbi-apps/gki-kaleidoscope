@@ -123,6 +123,7 @@ export class AichatComponent {
   private savedQueryIndexById = new Map<string, number>();
 
   @ViewChild('chatContainer') chatContainer?: ElementRef<HTMLElement>;
+  @ViewChild('messageInput') messageInput?: ElementRef<HTMLTextAreaElement>;
 
   constructor(
     private chatService: ChatService,
@@ -576,6 +577,7 @@ export class AichatComponent {
 
     conversation.draft = '';
     conversation.messages.push(message);
+    this.resetMessageInputHeight();
     this.updateConversationTitle(conversation, text);
 
     const system: ChatMessage = {
@@ -1020,11 +1022,29 @@ export class AichatComponent {
     this.saveConversations();
   }
 
-  @HostListener('document:keydown.enter', ['$event'])
-  handleEnterKey(event: KeyboardEvent): void {
+  onMessageKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+
     if (!this.loading) {
       this.sendMessage();
     }
+  }
+
+  resizeMessageInput(textarea: HTMLTextAreaElement): void {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
+  }
+
+  private resetMessageInputHeight(): void {
+    requestAnimationFrame(() => {
+      if (this.messageInput?.nativeElement) {
+        this.messageInput.nativeElement.style.height = 'auto';
+      }
+    });
   }
 
   select(event: Event, uri: string): void {
