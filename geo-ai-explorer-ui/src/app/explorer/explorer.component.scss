@@ -386,6 +386,7 @@ results-table {
   z-index: 16;
   border-left: 1px solid var(--surface-border, #dfe3ea);
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+  margin: 10px;
 }
 
 .inspector-workspace.attributes-hidden .object-pane-graph {
@@ -466,9 +467,9 @@ results-table {
 
 .graph-resizer {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--inspector-graph-width) - 5px);
+  top: 10px;
+  bottom: 10px;
+  left: calc(var(--inspector-graph-width) + 5px);
   z-index: 17;
   width: 10px;
   cursor: col-resize;
