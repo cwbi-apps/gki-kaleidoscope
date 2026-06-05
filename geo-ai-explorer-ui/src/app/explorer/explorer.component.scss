@@ -77,20 +77,30 @@
 
 .inspector-controls.has-floating-back {
   min-height: 4.5rem;
-  padding-left: 8.75rem;
 }
 
-.inspector-back-button {
+.inspector-top-actions {
   position: absolute;
   top: 1rem;
   left: 1rem;
   z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
   pointer-events: auto;
+}
+
+.inspector-back-button {
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
 }
 
 .inspector-back-button label {
   cursor: pointer;
+}
+
+.inspector-graph-top-button {
+  --inspector-tab-size: 2.75rem;
+  flex: 0 0 auto;
 }
 
 p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
@@ -325,19 +335,22 @@ results-table {
 .explorer-root.layout-inspect .inspector-controls h2 {
   position: absolute;
   top: 1rem;
-  left: 8.5rem;
+  left: 50%;
+  transform: translateX(-50%);
   max-width: min(24rem, calc(100% - 18rem));
   margin: 0;
-  padding: 0.55rem 0.85rem;
-  border: 1px solid var(--surface-border, #dfe3ea);
+  padding: 0.6rem 1rem;
+  border: 2px solid #cbd5e1;
   border-radius: 6px;
   overflow: hidden;
   background: color-mix(in srgb, var(--surface-card, #fff) 96%, transparent);
   color: #172033;
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.12rem;
+  font-weight: 800;
   line-height: 1.18;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 10px 26px rgba(15, 23, 42, 0.18);
   overflow-wrap: anywhere;
   white-space: normal;
 }

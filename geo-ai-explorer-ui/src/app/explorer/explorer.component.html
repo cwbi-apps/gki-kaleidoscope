@@ -104,8 +104,10 @@
   </section>
 
   <section class="inspector" *ngIf="selectedObject && workflowStep !== WorkflowStep.FullScreenChat">
+    <div
+      *ngIf="workflowStep !== WorkflowStep.DisambiguateObject"
+      class="inspector-top-actions">
       <p-button
-        *ngIf="workflowStep !== WorkflowStep.DisambiguateObject"
         class="inspector-back-button"
         severity="secondary"
         pTooltip="Go Back"
@@ -114,6 +116,18 @@
         <fa-icon [icon]="backIcon"></fa-icon>
         <label>Back</label>
       </p-button>
+
+      <button
+        *ngIf="isInspectorWorkflowStep()"
+        type="button"
+        class="inspector-pull-tab inspector-graph-top-button relationship-tab"
+        [class.active]="graphPanelOpen"
+        [pTooltip]="graphPanelOpen ? 'Close Graph Visualizer' : 'Open Graph Visualizer'"
+        tooltipPosition="bottom"
+        (click)="toggleGraphPanel()">
+        <fa-icon [icon]="relationshipIcon"></fa-icon>
+      </button>
+    </div>
 
       <div
         class="horizontal-layout inspector-controls"
@@ -193,15 +207,6 @@
           <fa-icon [icon]="attributesPanelOpen ? hideAttributesIcon : showAttributesIcon"></fa-icon>
         </button>
 
-        <button
-          type="button"
-          class="inspector-pull-tab relationship-tab"
-          [class.active]="graphPanelOpen"
-          [pTooltip]="graphPanelOpen ? 'Close Graph Visualizer' : 'Open Graph Visualizer'"
-          tooltipPosition="right"
-          (click)="toggleGraphPanel()">
-          <fa-icon [icon]="relationshipIcon"></fa-icon>
-        </button>
       </div>
 
       <section
