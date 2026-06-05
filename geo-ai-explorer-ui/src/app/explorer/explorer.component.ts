@@ -949,13 +949,21 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
     goBack() {
         const shouldZoomToRestoredLayers = this.isInspectorWorkflowStep();
+        let shouldResetInspectorPanelState = false;
 
-        if (this.isInspectorWorkflowStep()) {
-            this.resetInspectorPanelState();
-        }
+        this.previousWorkflowStep$.pipe(take(1)).subscribe(previousStep => {
+            shouldResetInspectorPanelState =
+                this.isInspectorWorkflowStep() &&
+                previousStep !== WorkflowStep.InspectObject &&
+                previousStep !== WorkflowStep.ViewNeighbors;
+        });
 
         this.zoomRestoredLayersAfterBack = shouldZoomToRestoredLayers;
         this.store.dispatch(ExplorerActions.backWorkflowStep());
+
+        if (shouldResetInspectorPanelState) {
+            this.resetInspectorPanelState();
+        }
     }
 
     private resetInspectorPanelState(): void {

@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.geoprism.geoai.explorer.core.config.AppProperties;
+import net.geoprism.geoai.explorer.core.model.GenericRestException;
 import net.geoprism.geoai.explorer.core.model.History;
 import net.geoprism.geoai.explorer.core.model.Message;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
@@ -93,6 +94,8 @@ public class BedrockService
   private String invokeAgent(String agentId, String agentAliasId, String sessionId, String inputText)
       throws InterruptedException, ExecutionException, TimeoutException
   {
+    validateAgentConfiguration(agentId, agentAliasId);
+
     final StringBuilder content = new StringBuilder();
 
     try (BedrockAgentRuntimeAsyncClient client = getClient())
@@ -129,6 +132,14 @@ public class BedrockService
     }
 
     return content.toString();
+  }
+
+  private void validateAgentConfiguration(String agentId, String agentAliasId)
+  {
+    if (agentId == null || agentId.isBlank() || agentAliasId == null || agentAliasId.isBlank())
+    {
+      throw new GenericRestException("Bedrock agent id and alias id must be configured before invoking Bedrock.");
+    }
   }
 
   private String stripCodeFence(String response)

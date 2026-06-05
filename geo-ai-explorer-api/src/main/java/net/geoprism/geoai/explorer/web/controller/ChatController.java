@@ -15,10 +15,13 @@
  */
 package net.geoprism.geoai.explorer.web.controller;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -66,6 +69,28 @@ public class ChatController
     LocationPage response = this.service.getPage(page.getStatement(), page.getType(), page.getOffset(), page.getLimit(), page.getExcludedTypes(), page.getSortField(), page.getSortDirection());
 
     return new ResponseEntity<LocationPage>(response, HttpStatus.OK);
+  }
+
+  @PostMapping("/api/chat/export-page")
+  @ResponseBody
+  public ResponseEntity<byte[]> exportPage(@RequestBody PageRequest page)
+  {
+    String csv = this.service.exportPageCsv(page.getStatement(), page.getType(), page.getExcludedTypes(), page.getSortField(), page.getSortDirection());
+    String filename = sanitizeFilename(page.getType() == null || page.getType().isBlank() ? "results" : page.getType()) + ".csv";
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+        .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+        .body(csv.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private static String sanitizeFilename(String filename)
+  {
+    return filename
+        .replaceAll("^.*[#/]", "")
+        .replaceAll("[^A-Za-z0-9._-]+", "_")
+        .replaceAll("_+", "_")
+        .replaceAll("^_|_$", "");
   }
 
 }

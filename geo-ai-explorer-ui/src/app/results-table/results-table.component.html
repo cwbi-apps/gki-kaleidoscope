@@ -70,9 +70,20 @@
       >
         <ng-container *ngFor="let item of displayedPageItems; trackBy: trackByPageItem">
           <section class="results-table-column" *ngIf="item.page.count > 0">
-            <h3 class="results-table-title">
-              {{ shouldShowTypeColumn(item.page) ? 'Results' : getPageTypeLabel(item.page) }}
-            </h3>
+            <div class="results-table-title-row">
+              <h3 class="results-table-title">
+                {{ shouldShowTypeColumn(item.page) ? 'Results' : getPageTypeLabel(item.page) }}
+              </h3>
+
+              <button
+                type="button"
+                class="results-export-button"
+                pTooltip="Export CSV"
+                (click)="exportTable(item, $event)">
+                <fa-icon [icon]="exportIcon"></fa-icon>
+                <span>Export</span>
+              </button>
+            </div>
 
             <div
               class="results-table-body"

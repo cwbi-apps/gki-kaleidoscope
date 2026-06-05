@@ -285,6 +285,16 @@
   text-align: center;
 }
 
+.sidebar-storage-note {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.65rem 0.25rem 0;
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
 .conversation-loading {
   flex: 0 0 auto;
   font-size: 10px;
@@ -342,7 +352,7 @@
 
 .message {
   width: min(100%, 980px);
-  max-width: 980px;
+  max-width: 900px;
   align-self: center;
   box-sizing: border-box;
 
@@ -350,17 +360,14 @@
   flex-direction: row;
   align-items: flex-end;
   justify-content: flex-start;
-  margin-right: 30px;
 }
 
 .message.system {
-  flex-direction: row-reverse;
   justify-content: flex-start;
-  margin-left: 30px;
-  margin-right: 0;
 }
 
 .message.user {
+  flex-direction: row-reverse;
   justify-content: flex-start;
 }
 
@@ -407,7 +414,7 @@
   border-radius: 16px;
   padding: 10px;
 
-  max-width: min(760px, 75%);
+  max-width: min(760px, calc(100% - 64px));
   box-sizing: border-box;
 }
 
@@ -439,11 +446,12 @@
   border-radius: 18px;
   overflow: hidden;
   box-sizing: border-box;
+  margin-right: 12px;
 }
 
-.message.system .sender-icon {
+.message.user .sender-icon {
   margin-right: 0;
-  margin-left: 20px;
+  margin-left: 12px;
 }
 
 .sender-icon img {

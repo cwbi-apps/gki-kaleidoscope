@@ -17,6 +17,7 @@ import {
     faThumbtack,
     faChevronDown,
     faChevronUp,
+    faFileExport,
     faSort,
     faSortUp,
     faSortDown
@@ -73,6 +74,7 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
     public sortIcon = faSort;
     public sortUpIcon = faSortUp;
     public sortDownIcon = faSortDown;
+    public exportIcon = faFileExport;
 
     pages$: Observable<LocationPage[]> = this.store.select(getPages);
 
@@ -304,6 +306,43 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
                 .catch(error => console.error('Failed to sort results page.', error))
                 .finally(() => this.endPageLoading(key));
         });
+    }
+
+    exportTable(item: PageDisplayItem, event: MouseEvent): void {
+        event.stopPropagation();
+
+        const sort = this.getPageSort(item.page, item.index);
+
+        this.chatService
+            .exportPage(item.page.statement, item.page.type, [], sort?.field, sort?.direction)
+            .then(blob => this.downloadCsv(blob, this.exportFilename(item.page)))
+            .catch(error => console.error('Failed to export results table.', error));
+    }
+
+    private downloadCsv(blob: Blob, filename: string): void {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    private exportFilename(page: LocationPage): string {
+        const label = this.shouldShowTypeColumn(page)
+            ? 'results'
+            : this.getPageTypeLabel(page);
+
+        const safeLabel = label
+            .replace(/^.*[#/]/, '')
+            .replace(/[^A-Za-z0-9._-]+/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_|_$/g, '');
+
+        return `${safeLabel || 'results'}.csv`;
     }
 
     getSortIcon(item: PageDisplayItem, column: PageDisplayColumn) {

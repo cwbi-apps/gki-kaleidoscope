@@ -129,8 +129,24 @@ export class ChatService {
         .then(page => {
           this.explorerSessionState.cachePages([page], 'page-query', cacheId);
           return page;
-        });
+      });
     }
+  }
+
+  exportPage(statement: string, type: string | null, excludedTypes: string[] = [], sortField?: string | null, sortDirection?: 'asc' | 'desc' | null): Promise<Blob> {
+    const params = {
+      statement,
+      type,
+      limit: 0,
+      offset: 0,
+      excludedTypes,
+      sortField,
+      sortDirection
+    };
+
+    return firstValueFrom(this.http.post(environment.apiUrl + 'api/chat/export-page', params, {
+      responseType: 'blob'
+    }));
   }
 
 }
