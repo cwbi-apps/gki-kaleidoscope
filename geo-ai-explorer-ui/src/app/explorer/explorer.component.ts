@@ -1,5 +1,5 @@
 import { Component, AfterViewInit, ElementRef, TemplateRef, ViewChild, inject, OnInit, OnDestroy } from '@angular/core';
-import { Map, NavigationControl, AttributionControl, LngLatBounds, LngLat, GeoJSONSource, LngLatBoundsLike, MapGeoJSONFeature, Source } from "maplibre-gl";
+import { Map, NavigationControl, AttributionControl, LngLatBounds, LngLat, GeoJSONSource, LngLatBoundsLike, MapGeoJSONFeature, Source, Popup } from "maplibre-gl";
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -159,9 +159,11 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     private renderScheduled = false;
     private zoomMapToExtentOnNextRender = false;
     private zoomMapToExtentRetries = 0;
+    private zoomRestoredLayersAfterBack = false;
     private mapResizeScheduled = false;
     private mapSyncScheduled = false;
     private mapElement?: ElementRef<HTMLElement>;
+    private featurePopup?: Popup;
     private currentGeoObjects: GeoObject[] = [];
     private geoObjectsByUri = new globalThis.Map<string, GeoObject>();
 
@@ -314,6 +316,10 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.updateGeoObjectIndex();
 
                 if (this.shouldShowMapForWorkflow(step)) {
+                    const shouldZoomRestoredLayers =
+                        this.zoomRestoredLayersAfterBack &&
+                        (step === WorkflowStep.MapAndResults || step === WorkflowStep.MinimizeChat || step === WorkflowStep.DisambiguateObject);
+
                     if (
                         (step === WorkflowStep.InspectObject || step === WorkflowStep.ViewNeighbors) &&
                         previousStep !== WorkflowStep.InspectObject &&
@@ -322,14 +328,11 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                         this.requestZoomMapToExtent();
                     }
 
-                    if (
-                        (previousStep === WorkflowStep.InspectObject || previousStep === WorkflowStep.ViewNeighbors) &&
-                        (step === WorkflowStep.MapAndResults || step === WorkflowStep.MinimizeChat || step === WorkflowStep.DisambiguateObject)
-                    ) {
-                        this.requestZoomMapToExtent();
-                    }
-
                     this.ensureMapInitialized();
+
+                    if (shouldZoomRestoredLayers) {
+                        this.requestZoomMapToExtent(24);
+                    }
 
                     if (data?.pageCacheId) {
                         this.currentPageCacheId = data.pageCacheId;
@@ -882,6 +885,9 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     private destroyMap(): void {
+        this.featurePopup?.remove();
+        this.featurePopup = undefined;
+
         if (this.map) {
             this.map.remove();
             this.map = undefined;
@@ -942,11 +948,13 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     goBack() {
+        const shouldZoomToRestoredLayers = this.isInspectorWorkflowStep();
+
         if (this.isInspectorWorkflowStep()) {
             this.resetInspectorPanelState();
         }
 
-        this.store.dispatch(ExplorerActions.setNeighbors({ objects: [], zoomMap: false }));
+        this.zoomRestoredLayersAfterBack = shouldZoomToRestoredLayers;
         this.store.dispatch(ExplorerActions.backWorkflowStep());
     }
 
@@ -1051,6 +1059,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 if (zoomed) {
                     this.zoomMapToExtentOnNextRender = false;
                     this.zoomMapToExtentRetries = 0;
+                    this.zoomRestoredLayersAfterBack = false;
                 }
                 else if (this.zoomMapToExtentOnNextRender && this.zoomMapToExtentRetries > 0) {
                     this.zoomMapToExtentRetries--;
@@ -1983,15 +1992,10 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                     if (layer != null) {
                         const uri = layer.prefix + feature.properties[layer.codeProperty];
 
-                        this.explorerService.getAttributes(uri)
+                        this.explorerService.getAttributes(uri, true)
                             .then(geoObject => {
                                 this.map!.setFeatureState({ source: layer.id, sourceLayer: layer.sourceLayer, id: feature.properties[layer.codeProperty] }, { selected: true });
-
-                                this.store.dispatch(ExplorerActions.appendWorkflowStep({
-                                    step: WorkflowStep.InspectObject,
-                                    data: geoObject,
-                                    zoomMap: false
-                                }));
+                                this.openFeaturePopup(geoObject, e.lngLat);
                             })
                             .catch(error => this.errorService.handleError(error))
                     }
@@ -2004,17 +2008,96 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                     let selectedObject = this.getGeoObjectByUri(uri);
 
                     if (selectedObject) {
-                        this.store.dispatch(ExplorerActions.appendWorkflowStep({
-                            step: WorkflowStep.InspectObject,
-                            data: selectedObject,
-                            zoomMap: false
-                        }));
+                        this.explorerService.getAttributes(selectedObject.properties.uri, true)
+                            .then(geoObject => this.openFeaturePopup(geoObject, e.lngLat))
+                            .catch(error => this.errorService.handleError(error));
                     }
                 }
             } else {
+                this.featurePopup?.remove();
+                this.featurePopup = undefined;
                 // this.store.dispatch(ExplorerActions.selectGeoObject(null));
             }
         })
+    }
+
+    private openFeaturePopup(geoObject: GeoObject, lngLat: LngLat): void {
+        if (!this.map) {
+            return;
+        }
+
+        this.featurePopup?.remove();
+
+        const content = this.buildFeaturePopupContent(geoObject);
+        this.featurePopup = new Popup({
+            closeButton: true,
+            closeOnClick: true,
+            maxWidth: '420px',
+            className: 'map-feature-popup'
+        })
+            .setLngLat(lngLat)
+            .setDOMContent(content)
+            .addTo(this.map);
+    }
+
+    private buildFeaturePopupContent(geoObject: GeoObject): HTMLElement {
+        const content = document.createElement('div');
+        content.className = 'map-feature-popup-content';
+
+        const title = document.createElement('h3');
+        title.className = 'map-feature-popup-title';
+        title.textContent = geoObject.properties.label ?? geoObject.properties.code ?? 'Map feature';
+        content.appendChild(title);
+
+        const tableWrap = document.createElement('div');
+        tableWrap.className = 'map-feature-popup-attributes';
+
+        const table = document.createElement('table');
+
+        Object.entries(geoObject.properties)
+            .filter(([, value]) => value == null || typeof value !== 'object')
+            .forEach(([key, value]) => {
+                const row = document.createElement('tr');
+
+                const keyCell = document.createElement('th');
+                keyCell.scope = 'row';
+                keyCell.textContent = key;
+
+                const valueCell = document.createElement('td');
+                valueCell.textContent = String(value ?? '');
+
+                row.appendChild(keyCell);
+                row.appendChild(valueCell);
+                table.appendChild(row);
+            });
+
+        tableWrap.appendChild(table);
+        content.appendChild(tableWrap);
+
+        const actions = document.createElement('div');
+        actions.className = 'map-feature-popup-actions';
+
+        const inspectButton = document.createElement('button');
+        inspectButton.type = 'button';
+        inspectButton.className = 'map-feature-popup-inspect';
+        inspectButton.textContent = 'Inspect';
+        inspectButton.addEventListener('click', () => this.inspectMapPopupObject(geoObject));
+
+        actions.appendChild(inspectButton);
+        content.appendChild(actions);
+
+        return content;
+    }
+
+    private inspectMapPopupObject(geoObject: GeoObject): void {
+        this.featurePopup?.remove();
+        this.featurePopup = undefined;
+
+        this.store.dispatch(ExplorerActions.appendWorkflowStep({
+            step: WorkflowStep.InspectObject,
+            data: geoObject,
+            zoomMap: false
+        }));
     }
 
     renderHighlights() {

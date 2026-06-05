@@ -775,6 +775,97 @@ results-table {
   outline: none;
 }
 
+::ng-deep .map-feature-popup .maplibregl-popup-content {
+  padding: 0;
+  border: 1px solid var(--surface-border, #dfe3ea);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.22);
+}
+
+::ng-deep .map-feature-popup .maplibregl-popup-close-button {
+  width: 2rem;
+  height: 2rem;
+  color: #64748b;
+  font-size: 1.25rem;
+}
+
+::ng-deep .map-feature-popup-content {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 2rem));
+  max-height: min(520px, calc(100vh - 5rem));
+  background: #fff;
+}
+
+::ng-deep .map-feature-popup-title {
+  margin: 0;
+  padding: 0.85rem 2.25rem 0.75rem 1rem;
+  border-bottom: 1px solid var(--surface-border, #dfe3ea);
+  color: #172033;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+::ng-deep .map-feature-popup-attributes {
+  min-height: 0;
+  overflow: auto;
+}
+
+::ng-deep .map-feature-popup-attributes table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #334155;
+  font-size: 0.86rem;
+}
+
+::ng-deep .map-feature-popup-attributes th,
+::ng-deep .map-feature-popup-attributes td {
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+}
+
+::ng-deep .map-feature-popup-attributes th {
+  width: 34%;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 700;
+}
+
+::ng-deep .map-feature-popup-attributes td {
+  overflow-wrap: anywhere;
+}
+
+::ng-deep .map-feature-popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.75rem;
+  border-top: 1px solid var(--surface-border, #dfe3ea);
+  background: #fff;
+}
+
+::ng-deep .map-feature-popup-inspect {
+  min-width: 5.75rem;
+  border: 1px solid #10b981;
+  border-radius: 6px;
+  background: #10b981;
+  color: #fff;
+  padding: 0.5rem 0.85rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+::ng-deep .map-feature-popup-inspect:hover,
+::ng-deep .map-feature-popup-inspect:focus-visible {
+  background: #059669;
+  border-color: #059669;
+  outline: none;
+}
+
 /* Responsive behavior */
 
 @media (max-width: 900px) {
