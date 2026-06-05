@@ -50,68 +50,53 @@ fa-icon {
   background: var(--surface-card, #fff);
 }
 
-.results-panel::before {
-  content: '';
-  position: absolute;
-  top: -1.25rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 25;
-
-  width: 3.375rem;
-  height: 2.5rem;
-
-  border: 1px solid var(--surface-border, #dfe3ea);
-  border-bottom: 0;
-  border-radius: 0.875rem 0.875rem 0 0;
-  background: var(--surface-card, #fff);
-  box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.08);
-}
-
 :host.results-panel-collapsed .results-panel {
   background: transparent;
 }
 
-:host.results-panel-collapsed .results-panel::before {
-  display: none;
-}
-
 .results-collapse-toggle {
   position: absolute;
-  top: -1.125rem;
+  top: -1.4rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
 
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.55rem;
+  height: 2.55rem;
 
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
   border: 1px solid var(--surface-border, #dfe3ea);
-  border-radius: 0.5rem;
+  border-radius: 6px;
   background: var(--surface-card, #fff);
   color: var(--text-color-secondary, #64748b);
 
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
   cursor: pointer;
 }
 
 :host.results-panel-collapsed .results-collapse-toggle {
-  top: -2.75rem;
+  top: -3rem;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
 }
 
 .results-collapse-toggle:hover {
-  color: var(--primary-color, #3b82f6);
+  color: #10b981;
+  border-color: #10b981;
   background: var(--surface-hover, #f6f7f9);
 }
 
 .results-collapse-toggle:focus-visible {
-  outline: 2px solid var(--primary-color, #3b82f6);
-  outline-offset: 2px;
+  color: #10b981;
+  border-color: #10b981;
+  outline: none;
+}
+
+:host:not(.results-panel-collapsed) .results-collapse-toggle {
+  color: #10b981;
+  border-color: #10b981;
 }
 
 .results-resize-handle {
@@ -125,22 +110,15 @@ fa-icon {
   cursor: ns-resize;
 }
 
-.results-resize-handle::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 50%;
-  transform: translateX(-50%);
-
-  width: 48px;
-  height: 3px;
-
-  border-radius: 999px;
-  background: rgba(100, 116, 139, 0.35);
+.results-resize-handle:hover,
+.results-resize-handle:focus-visible {
+  background:
+    linear-gradient(to bottom, transparent 0 3px, #10b981 3px 7px, transparent 7px 12px);
+  outline: none;
 }
 
-.results-resize-handle:hover::after {
-  background: rgba(100, 116, 139, 0.7);
+.results-resize-handle::after {
+  content: none;
 }
 
 /* Header */

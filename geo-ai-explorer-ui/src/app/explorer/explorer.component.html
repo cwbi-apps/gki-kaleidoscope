@@ -123,41 +123,6 @@
             <h2 class="inspector-title">
               {{ selectedObject.properties.label }}
             </h2>
-            <div
-              class="inspector-pane-picker"
-              *ngIf="isInspectorWorkflowStep()"
-              cdkDrag
-              cdkDragBoundary=".inspector">
-              <span class="inspector-pane-picker-handle" cdkDragHandle aria-hidden="true"></span>
-
-              <label>
-                <span>Left</span>
-                <select
-                  [ngModel]="inspectorPanes[0]"
-                  (ngModelChange)="setInspectorPane(0, $event)">
-                  <option
-                    *ngFor="let option of inspectorPaneOptions"
-                    [ngValue]="option.value"
-                    [disabled]="isInspectorPaneOptionDisabled(0, option.value)">
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                <span>Right</span>
-                <select
-                  [ngModel]="inspectorPanes[1]"
-                  (ngModelChange)="setInspectorPane(1, $event)">
-                  <option
-                    *ngFor="let option of inspectorPaneOptions"
-                    [ngValue]="option.value"
-                    [disabled]="isInspectorPaneOptionDisabled(1, option.value)">
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-            </div>
           </ng-container>
 
           <ng-container *ngIf="(previousWorkflowStep$ | async) === WorkflowStep.DisambiguateObject">
@@ -194,18 +159,19 @@
 
     <div
       class="inspector-workspace"
+      [class.attributes-hidden]="!attributesPanelOpen"
+      [class.graph-open]="graphPanelOpen"
       *ngIf="isInspectorWorkflowStep()"
-      [style.--inspector-left-width.%]="inspectorSplitPercent">
+      [style.--inspector-left-width.%]="inspectorSplitPercent"
+      [style.--inspector-graph-width.%]="graphPanelWidthPercent">
       <section
-        class="object-pane object-pane-left"
-        [class.object-pane-map]="inspectorPanes[0] === 'map'">
-        <ng-container
-          [ngTemplateOutlet]="inspectorPaneTemplate"
-          [ngTemplateOutletContext]="{ pane: inspectorPanes[0], side: 'left' }">
-        </ng-container>
+        class="object-pane object-pane-map">
+        <div #mapElement id="map"></div>
+        <ng-container *ngTemplateOutlet="legendPanelTemplate"></ng-container>
       </section>
 
       <div
+        *ngIf="attributesPanelOpen"
         class="inspector-resizer"
         role="separator"
         aria-orientation="vertical"
@@ -216,39 +182,63 @@
         (pointercancel)="endInspectorResize($event)">
       </div>
 
-      <section
-        class="object-pane object-pane-right"
-        [class.object-pane-map]="inspectorPanes[1] === 'map'">
-        <ng-container
-          [ngTemplateOutlet]="inspectorPaneTemplate"
-          [ngTemplateOutletContext]="{ pane: inspectorPanes[1], side: 'right' }">
-        </ng-container>
-      </section>
-    </div>
+      <div class="inspector-pull-tabs">
+        <button
+          type="button"
+          class="inspector-pull-tab"
+          [class.active]="attributesPanelOpen"
+          [pTooltip]="attributesPanelOpen ? 'Close Attributes' : 'Open Attributes'"
+          tooltipPosition="right"
+          (click)="toggleAttributesPanel()">
+          <fa-icon [icon]="attributesPanelOpen ? hideAttributesIcon : showAttributesIcon"></fa-icon>
+        </button>
 
-    <ng-template #inspectorPaneTemplate let-pane="pane" let-side="side">
-      <div class="object-pane-shell" [ngSwitch]="pane">
-        <div class="object-pane-header" *ngIf="pane !== 'map' && side !== 'left'">
-          <h3>{{ inspectorPaneLabel(pane) }}</h3>
-        </div>
-
-        <div class="object-pane-body" *ngSwitchCase="'map'">
-          <div #mapElement id="map"></div>
-          <ng-container *ngTemplateOutlet="legendPanelTemplate"></ng-container>
-        </div>
-
-        <div class="object-pane-body" *ngSwitchCase="'attributes'">
-          <attribute-panel *ngIf="selectedObject"></attribute-panel>
-        </div>
-
-        <div class="object-pane-body" *ngSwitchCase="'graph'">
-          <graph-explorer
-            #graphExplorer
-            [explorer]="this">
-          </graph-explorer>
-        </div>
+        <button
+          type="button"
+          class="inspector-pull-tab relationship-tab"
+          [class.active]="graphPanelOpen"
+          [pTooltip]="graphPanelOpen ? 'Close Graph Visualizer' : 'Open Graph Visualizer'"
+          tooltipPosition="right"
+          (click)="toggleGraphPanel()">
+          <fa-icon [icon]="relationshipIcon"></fa-icon>
+        </button>
       </div>
-    </ng-template>
+
+      <section
+        class="object-pane object-pane-attributes"
+        *ngIf="attributesPanelOpen">
+        <div class="object-pane-shell">
+          <div class="object-pane-body">
+            <attribute-panel *ngIf="selectedObject"></attribute-panel>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="object-pane object-pane-graph"
+        *ngIf="graphPanelOpen">
+        <div class="object-pane-shell">
+          <div class="object-pane-body">
+            <graph-explorer
+              #graphExplorer
+              [explorer]="this">
+            </graph-explorer>
+          </div>
+        </div>
+      </section>
+
+      <div
+        *ngIf="graphPanelOpen && !attributesPanelOpen"
+        class="graph-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        tabindex="0"
+        (pointerdown)="startGraphResize($event)"
+        (pointermove)="onGraphResize($event)"
+        (pointerup)="endGraphResize($event)"
+        (pointercancel)="endGraphResize($event)">
+      </div>
+    </div>
 
     <div id="graphExplorerContainer" *ngIf="!isInspectorWorkflowStep()">
       <ng-container *ngIf="(previousWorkflowStep$ | async) === WorkflowStep.DisambiguateObject">
@@ -366,8 +356,8 @@
     <p-panel *ngIf="
                workflowStep === WorkflowStep.MapAndResults ||
                workflowStep === WorkflowStep.MinimizeChat ||
-               (workflowStep === WorkflowStep.InspectObject && isInspectorPaneActive('map')) ||
-               (workflowStep === WorkflowStep.ViewNeighbors && isInspectorPaneActive('map'))
+               workflowStep === WorkflowStep.InspectObject ||
+               workflowStep === WorkflowStep.ViewNeighbors
              "
            [toggleable]="true"
            header="Layers"

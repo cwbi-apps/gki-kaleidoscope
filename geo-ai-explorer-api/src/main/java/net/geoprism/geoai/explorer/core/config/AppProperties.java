@@ -36,7 +36,7 @@ public class AppProperties
 
   public String getSparqlAgentAliasId()
   {
-    return env.getProperty("bedrock.sparql.agent.alias.id");
+    return env.getProperty("bedrock.sparql.Xagent.alias.id");
   }
 
   public Region getBedrockRegion()

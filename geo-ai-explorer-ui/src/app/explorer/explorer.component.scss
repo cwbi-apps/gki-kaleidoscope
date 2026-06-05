@@ -80,41 +80,6 @@
   padding-left: 8.75rem;
 }
 
-.inspector-pane-picker {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.6rem;
-  min-width: 0;
-}
-
-.inspector-pane-picker label {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: #475569;
-  font-size: 0.82rem;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.inspector-pane-picker select {
-  min-width: 8.25rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 0.42rem 1.85rem 0.42rem 0.55rem;
-  background: #fff;
-  color: #172033;
-  font: inherit;
-  cursor: pointer;
-}
-
-.inspector-pane-picker select:focus {
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
-  outline: none;
-}
-
 .inspector-back-button {
   position: absolute;
   top: 1rem;
@@ -353,58 +318,36 @@ results-table {
   pointer-events: none;
 }
 
-.explorer-root.layout-inspect .inspector-controls h2,
-.explorer-root.layout-inspect .inspector-pane-picker {
+.explorer-root.layout-inspect .inspector-controls h2 {
   pointer-events: auto;
 }
 
 .explorer-root.layout-inspect .inspector-controls h2 {
   position: absolute;
   top: 1rem;
-  left: 9rem;
-  width: max(8rem, calc(var(--inspector-left-width, 30%) - 10rem));
-  max-width: calc(100% - 18rem);
+  left: 8.5rem;
+  max-width: min(24rem, calc(100% - 18rem));
   margin: 0;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--surface-border, #dfe3ea);
+  border-radius: 6px;
   overflow: hidden;
+  background: color-mix(in srgb, var(--surface-card, #fff) 96%, transparent);
   color: #172033;
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.18;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
   overflow-wrap: anywhere;
   white-space: normal;
 }
 
-.explorer-root.layout-inspect .inspector-pane-picker {
-  position: relative;
-  margin-top: 0;
-  padding: 0.45rem;
-  border: 1px solid var(--surface-border, #dfe3ea);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-card, #fff) 94%, transparent);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
-}
-
-.inspector-pane-picker-handle {
-  flex: 0 0 auto;
-  width: 0.8rem;
-  height: 2rem;
-  border-radius: 4px;
-  cursor: grab;
-  background-image: radial-gradient(circle, #64748b 1.2px, transparent 1.4px);
-  background-position: 0 0;
-  background-size: 4px 4px;
-  opacity: 0.75;
-}
-
-.inspector-pane-picker-handle:active {
-  cursor: grabbing;
-}
-
 .inspector-workspace {
   --inspector-left-width: 30%;
+  --inspector-graph-width: 50%;
+  --inspector-tab-size: 2.55rem;
   flex: 1 1 0;
-  display: grid;
-  grid-template-columns: minmax(0, var(--inspector-left-width)) 10px minmax(0, 1fr);
+  position: relative;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -412,10 +355,43 @@ results-table {
 }
 
 .object-pane {
+  position: absolute;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   background: var(--surface-card, #fff);
+}
+
+.object-pane-map {
+  inset: 0;
+  z-index: 1;
+  background: #111;
+}
+
+.object-pane-attributes {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  width: var(--inspector-left-width);
+  border-right: 1px solid var(--surface-border, #dfe3ea);
+  box-shadow: 8px 0 22px rgba(15, 23, 42, 0.08);
+}
+
+.object-pane-graph {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--inspector-left-width);
+  z-index: 16;
+  border-left: 1px solid var(--surface-border, #dfe3ea);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+}
+
+.inspector-workspace.attributes-hidden .object-pane-graph {
+  left: 0;
+  right: auto;
+  width: var(--inspector-graph-width);
 }
 
 .object-pane-shell {
@@ -427,7 +403,7 @@ results-table {
   min-height: 0;
 }
 
-.explorer-root.layout-inspect .object-pane-left .object-pane-shell {
+.explorer-root.layout-inspect .object-pane-attributes .object-pane-shell {
   padding-top: 5rem;
 }
 
@@ -467,8 +443,12 @@ results-table {
 }
 
 .inspector-resizer {
-  position: relative;
-  z-index: 2;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--inspector-left-width) - 5px);
+  z-index: 17;
+  width: 10px;
   cursor: col-resize;
   background:
     linear-gradient(to right, transparent 0 4px, #cbd5e1 4px 6px, transparent 6px 10px);
@@ -476,10 +456,68 @@ results-table {
 }
 
 .inspector-resizer:hover,
-.inspector-resizer:focus-visible {
+.inspector-resizer:focus-visible,
+.graph-resizer:hover,
+.graph-resizer:focus-visible {
   background:
     linear-gradient(to right, transparent 0 3px, #10b981 3px 7px, transparent 7px 10px);
   outline: none;
+}
+
+.graph-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--inspector-graph-width) - 5px);
+  z-index: 17;
+  width: 10px;
+  cursor: col-resize;
+  background:
+    linear-gradient(to right, transparent 0 4px, #cbd5e1 4px 6px, transparent 6px 10px);
+  touch-action: none;
+}
+
+.inspector-pull-tabs {
+  position: absolute;
+  top: 50%;
+  left: var(--inspector-left-width);
+  z-index: 18;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.inspector-workspace.attributes-hidden .inspector-pull-tabs {
+  left: 1rem;
+  transform: translateY(-50%);
+}
+
+.inspector-pull-tab {
+  width: var(--inspector-tab-size);
+  height: var(--inspector-tab-size);
+  border: 1px solid #dbe3ef;
+  border-radius: 6px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
+  pointer-events: auto;
+}
+
+.inspector-pull-tab:hover,
+.inspector-pull-tab:focus-visible,
+.inspector-pull-tab.active {
+  color: #10b981;
+  border-color: #10b981;
+  outline: none;
+}
+
+.relationship-tab {
+  font-size: 1.15rem;
 }
 
 /* Disambiguation mode:
@@ -753,11 +791,16 @@ results-table {
 
   .explorer-root.layout-inspect {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(260px, 34vh) minmax(280px, 32vh) minmax(220px, 1fr);
-    grid-template-areas:
-      "inspector"
-      "map"
-      "results";
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "inspector";
+  }
+
+  .object-pane-graph {
+    right: 0;
+  }
+
+  .inspector-workspace.attributes-hidden .object-pane-graph {
+    right: auto;
   }
 
   .explorer-root.layout-ai-results {

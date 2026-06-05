@@ -29,7 +29,7 @@ import { TabsModule } from 'primeng/tabs';
 import { debounce } from 'lodash';
 import { VectorLayer } from '../models/vector-layer.model';
 import { environment } from '../../environments/environment';
-import { faArrowLeft, faArrowRight, faDownLeftAndUpRightToCenter, faFloppyDisk, faUpRightAndDownLeftFromCenter } from '@fortawesome/free-solid-svg-icons';
+import { faAnglesLeft, faAnglesRight, faArrowLeft, faArrowRight, faDownLeftAndUpRightToCenter, faFloppyDisk, faShareNodes, faUpRightAndDownLeftFromCenter } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ButtonModule } from 'primeng/button';
 import { LocationPage } from '../models/chat.model';
@@ -38,13 +38,6 @@ import { CachedExplorerPages, ExplorerSessionStateService } from '../service/exp
 import { DialogModule } from 'primeng/dialog';
 
 export interface TypeLegend { [key: string]: { label: string, color: string, visible: boolean, included: boolean } }
-
-export type InspectorPane = 'map' | 'attributes' | 'graph';
-
-interface InspectorPaneOption {
-    value: InspectorPane;
-    label: string;
-}
 
 @Component({
     selector: 'app-explorer',
@@ -90,6 +83,9 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     public minimizeIcon = faDownLeftAndUpRightToCenter;
     public upsizeIcon = faUpRightAndDownLeftFromCenter;
     public saveQueryIcon = faFloppyDisk;
+    public hideAttributesIcon = faAnglesLeft;
+    public showAttributesIcon = faAnglesRight;
+    public relationshipIcon = faShareNodes;
 
     public static GEO = "http://www.opengis.net/ont/geosparql#";
 
@@ -196,16 +192,16 @@ export class ExplorerComponent implements OnInit, OnDestroy {
 
     public chatMinimized: boolean = false;
 
-    public inspectorPaneOptions: InspectorPaneOption[] = [
-        { value: 'map', label: 'Map' },
-        { value: 'attributes', label: 'Attributes' },
-        { value: 'graph', label: 'Graph' }
-    ];
-    public inspectorPanes: [InspectorPane, InspectorPane] = ['attributes', 'map'];
+    public attributesPanelOpen = true;
+    public graphPanelOpen = false;
     public inspectorSplitPercent = 30;
+    public graphPanelWidthPercent = 50;
     private inspectorResizeStartX = 0;
     private inspectorResizeStartPercent = 30;
     private inspectorResizeContainerWidth = 0;
+    private graphResizeStartX = 0;
+    private graphResizeStartPercent = 50;
+    private graphResizeContainerWidth = 0;
 
     public resultsPanelHeightPx = Math.round(window.innerHeight * 0.4);
     public resultsCollapsed = false;
@@ -259,7 +255,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.zoomMap = zoomMap;
                 this.updateGeoObjectIndex();
 
-                if (this.isInspectorWorkflowStep() && this.isInspectorPaneActive('map')) {
+                if (this.isInspectorWorkflowStep()) {
                     this.requestZoomMapToExtent();
                 }
 
@@ -279,7 +275,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             .subscribe(([object, zoomMap]) => {
                 this.activeTab = "0";
                 this.selectObject(object, zoomMap);
-                if (this.isInspectorWorkflowStep() && this.isInspectorPaneActive('map')) {
+                if (this.isInspectorWorkflowStep()) {
                     this.requestZoomMapToExtent();
                 }
                 this.resizeMapAfterLayoutChange();
@@ -318,6 +314,14 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                 this.updateGeoObjectIndex();
 
                 if (this.shouldShowMapForWorkflow(step)) {
+                    if (
+                        (step === WorkflowStep.InspectObject || step === WorkflowStep.ViewNeighbors) &&
+                        previousStep !== WorkflowStep.InspectObject &&
+                        previousStep !== WorkflowStep.ViewNeighbors
+                    ) {
+                        this.requestZoomMapToExtent();
+                    }
+
                     if (
                         (previousStep === WorkflowStep.InspectObject || previousStep === WorkflowStep.ViewNeighbors) &&
                         (step === WorkflowStep.MapAndResults || step === WorkflowStep.MinimizeChat || step === WorkflowStep.DisambiguateObject)
@@ -761,13 +765,11 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     private shouldShowMapForWorkflow(step: WorkflowStep): boolean {
-        if (step === WorkflowStep.InspectObject || step === WorkflowStep.ViewNeighbors) {
-            return this.isInspectorPaneActive('map');
-        }
-
         return step === WorkflowStep.MapAndResults ||
             step === WorkflowStep.DisambiguateObject ||
-            step === WorkflowStep.MinimizeChat;
+            step === WorkflowStep.MinimizeChat ||
+            step === WorkflowStep.InspectObject ||
+            step === WorkflowStep.ViewNeighbors;
     }
 
     public isInspectorWorkflowStep(): boolean {
@@ -775,32 +777,21 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             this.workflowStep === WorkflowStep.ViewNeighbors;
     }
 
-    public isInspectorPaneActive(pane: InspectorPane): boolean {
-        return this.inspectorPanes.includes(pane);
-    }
-
-    public setInspectorPane(index: 0 | 1, pane: InspectorPane): void {
-        const otherIndex = index === 0 ? 1 : 0;
-
-        if (this.inspectorPanes[otherIndex] === pane) {
-            this.inspectorPanes[otherIndex] = this.inspectorPanes[index];
-        }
-
-        this.inspectorPanes[index] = pane;
-        this.inspectorPanes = [...this.inspectorPanes] as [InspectorPane, InspectorPane];
+    public toggleAttributesPanel(): void {
+        this.attributesPanelOpen = !this.attributesPanelOpen;
         this.syncMapToInspectorLayout();
     }
 
-    public isInspectorPaneOptionDisabled(index: 0 | 1, pane: InspectorPane): boolean {
-        const otherIndex = index === 0 ? 1 : 0;
-        return this.inspectorPanes[otherIndex] === pane;
-    }
-
-    public inspectorPaneLabel(pane: InspectorPane): string {
-        return this.inspectorPaneOptions.find(option => option.value === pane)?.label ?? pane;
+    public toggleGraphPanel(): void {
+        this.graphPanelOpen = !this.graphPanelOpen;
+        this.syncMapToInspectorLayout();
     }
 
     public startInspectorResize(event: PointerEvent): void {
+        if (!this.attributesPanelOpen) {
+            return;
+        }
+
         const container = (event.currentTarget as HTMLElement).closest('.inspector-workspace') as HTMLElement | null;
 
         if (!container) {
@@ -815,7 +806,7 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     public onInspectorResize(event: PointerEvent): void {
-        if (this.inspectorResizeContainerWidth <= 0) {
+        if (!this.attributesPanelOpen || this.inspectorResizeContainerWidth <= 0) {
             return;
         }
 
@@ -834,6 +825,44 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         return Math.min(75, Math.max(25, value));
     }
 
+    public startGraphResize(event: PointerEvent): void {
+        if (!this.graphPanelOpen || this.attributesPanelOpen) {
+            return;
+        }
+
+        const container = (event.currentTarget as HTMLElement).closest('.inspector-workspace') as HTMLElement | null;
+
+        if (!container) {
+            return;
+        }
+
+        this.graphResizeStartX = event.clientX;
+        this.graphResizeStartPercent = this.graphPanelWidthPercent;
+        this.graphResizeContainerWidth = container.getBoundingClientRect().width;
+        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+        event.preventDefault();
+    }
+
+    public onGraphResize(event: PointerEvent): void {
+        if (!this.graphPanelOpen || this.attributesPanelOpen || this.graphResizeContainerWidth <= 0) {
+            return;
+        }
+
+        const deltaPercent = ((event.clientX - this.graphResizeStartX) / this.graphResizeContainerWidth) * 100;
+        this.graphPanelWidthPercent = this.clampGraphPanelWidth(this.graphResizeStartPercent + deltaPercent);
+        this.resizeMapAfterLayoutChange();
+    }
+
+    public endGraphResize(event: PointerEvent): void {
+        this.graphResizeContainerWidth = 0;
+        (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+        this.resizeMapAfterLayoutChange();
+    }
+
+    private clampGraphPanelWidth(value: number): number {
+        return Math.min(85, Math.max(30, value));
+    }
+
     private syncMapToInspectorLayout(): void {
         if (this.mapSyncScheduled) {
             return;
@@ -845,15 +874,9 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             this.mapSyncScheduled = false;
 
             if (this.shouldShowMapForWorkflow(this.workflowStep)) {
-                if (this.isInspectorWorkflowStep()) {
-                    this.requestZoomMapToExtent();
-                }
-
                 this.ensureMapInitialized();
                 this.scheduleRender();
                 this.resizeMapAfterLayoutChange();
-            } else if (this.isInspectorWorkflowStep()) {
-                this.destroyMap();
             }
         });
     }
@@ -919,8 +942,17 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     }
 
     goBack() {
+        if (this.isInspectorWorkflowStep()) {
+            this.resetInspectorPanelState();
+        }
+
         this.store.dispatch(ExplorerActions.setNeighbors({ objects: [], zoomMap: false }));
         this.store.dispatch(ExplorerActions.backWorkflowStep());
+    }
+
+    private resetInspectorPanelState(): void {
+        this.attributesPanelOpen = true;
+        this.graphPanelOpen = false;
     }
 
     onMapBack() {
