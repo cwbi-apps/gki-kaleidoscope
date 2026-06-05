@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, Input, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, inject, Input, OnDestroy, ViewChild } from '@angular/core';
 import { ExplorerComponent, TypeLegend } from '../explorer/explorer.component';
 import { CommonModule } from '@angular/common';
 import { Edge, Node, GraphComponent, GraphModule, NgxGraphStates, NgxGraphStateChangeEvent } from '@swimlane/ngx-graph';
@@ -79,11 +79,17 @@ export const DIMENSIONS = {
   templateUrl: './graph-explorer.component.html',
   styleUrl: './graph-explorer.component.scss'
 })
-export class GraphExplorerComponent implements OnDestroy {
+export class GraphExplorerComponent implements AfterViewInit, OnDestroy {
 
   @Input() explorer!: ExplorerComponent;
 
   @ViewChild("graph") graph!: GraphComponent;
+
+  @ViewChild("graphContainer") set graphContainerRef(ref: ElementRef<HTMLElement> | undefined) {
+    this.graphContainer = ref;
+    this.observeGraphContainer();
+    this.scheduleResizeRefresh();
+  }
 
   private store = inject(Store);
 
@@ -97,6 +103,7 @@ export class GraphExplorerComponent implements OnDestroy {
 
   public svgHeight: number | null = null;
   public svgWidth: number | null = null;
+  public graphView: [number, number] = [0, 0];
 
   // public geoObjects?: GeoObject[];
   public data?: TreeData;
@@ -126,6 +133,10 @@ export class GraphExplorerComponent implements OnDestroy {
   private highlightedObject: GeoObject | null = null;
 
   public typeLegend: TypeLegend = {};
+
+  private graphContainer?: ElementRef<HTMLElement>;
+  private resizeObserver?: ResizeObserver;
+  private resizeRefreshFrame = 0;
 
   constructor(
     private queryService: ExplorerService,
@@ -174,9 +185,20 @@ export class GraphExplorerComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.store.dispatch(ExplorerActions.setNeighbors({ objects: [], zoomMap: false }));
 
+    this.resizeObserver?.disconnect();
+
+    if (this.resizeRefreshFrame > 0) {
+      cancelAnimationFrame(this.resizeRefreshFrame);
+    }
+
     this.onHighlightedObjectChange.unsubscribe();
     this.onWorkflowStateChange.unsubscribe();
     this.onSelectedObjectChange.unsubscribe();
+  }
+
+  ngAfterViewInit(): void {
+    this.observeGraphContainer();
+    this.scheduleResizeRefresh();
   }
 
   public renderGeoObjectAndNeighbors(geoObject: GeoObject, forceRefresh: boolean = false) {
@@ -320,12 +342,57 @@ export class GraphExplorerComponent implements OnDestroy {
   }
 
   resizeDimensions(): void {
-    let graphContainer = document.getElementById("graph-container");
+    const graphContainer = this.graphContainer?.nativeElement;
 
     if (graphContainer) {
-      this.svgHeight = graphContainer.clientHeight - 50;
+      this.svgHeight = Math.max(0, graphContainer.clientHeight - 50);
       this.svgWidth = graphContainer.clientWidth;
+      this.graphView = [this.svgWidth, this.svgHeight];
     }
+  }
+
+  public scheduleResizeRefresh(): void {
+    if (this.resizeRefreshFrame > 0) {
+      cancelAnimationFrame(this.resizeRefreshFrame);
+    }
+
+    this.resizeRefreshFrame = requestAnimationFrame(() => {
+      this.resizeRefreshFrame = 0;
+      this.refreshAfterResize();
+    });
+  }
+
+  private refreshAfterResize(): void {
+    this.resizeDimensions();
+
+    if (!this.graph || !this.data) {
+      return;
+    }
+
+    this.graph.update();
+    this.graph.updateGraphDims();
+
+    requestAnimationFrame(() => {
+      if (!this.graph) {
+        return;
+      }
+
+      this.graph.updateGraphDims();
+      this.enforceBounds();
+    });
+  }
+
+  private observeGraphContainer(): void {
+    this.resizeObserver?.disconnect();
+
+    const graphContainer = this.graphContainer?.nativeElement;
+
+    if (!graphContainer) {
+      return;
+    }
+
+    this.resizeObserver = new ResizeObserver(() => this.scheduleResizeRefresh());
+    this.resizeObserver.observe(graphContainer);
   }
 
   // Thanks to https://stackoverflow.com/questions/52172067/create-svg-hexagon-points-with-only-only-a-length
