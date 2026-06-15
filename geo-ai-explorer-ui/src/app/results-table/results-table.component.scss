@@ -259,7 +259,7 @@ fa-icon {
   grid-template-rows: auto minmax(0, 1fr) auto;
 
   border: 1px solid var(--surface-border, #dfe3ea);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--surface-card, #fff);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 
@@ -271,7 +271,7 @@ fa-icon {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.65rem 0.75rem 0.65rem 1rem;
+  padding: 5px 10px;
   border-bottom: 1px solid var(--surface-border, #dfe3ea);
   background: var(--surface-ground, #f6f7f9);
 }
@@ -279,7 +279,7 @@ fa-icon {
 .results-table-title {
   margin: 0;
   min-width: 0;
-  font-size: 1rem;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -361,6 +361,10 @@ fa-icon {
   min-height: 0;
 }
 
+.results-table-body ::ng-deep .p-datatable-tbody > tr > td {
+  font-size: 14px;
+}
+
 .results-sort-button {
   width: 100%;
   min-width: 0;
@@ -377,6 +381,7 @@ fa-icon {
   padding: 0;
 
   font: inherit;
+  font-size: 14px;
   font-weight: 700;
   text-align: left;
 

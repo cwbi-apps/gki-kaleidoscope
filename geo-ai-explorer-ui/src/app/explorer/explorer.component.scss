@@ -111,6 +111,10 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
   cursor: pointer;
 }
 
+::ng-deep .p-button {
+  font-size: 14px;
+}
+
 #map {
   width: 100%;
   height: 100%;
@@ -713,6 +717,8 @@ results-table {
   cursor: grab;
   padding: 0.35rem 0;
   user-select: none;
+
+  font-size: 14px;
 }
 
 .legend-item:active {

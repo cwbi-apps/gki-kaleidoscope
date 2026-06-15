@@ -139,7 +139,7 @@
   gap: 6px;
 
   border: 1px solid #ccc;
-  border-radius: 12px;
+  border-radius: 8px;
   background: #f7f7f7;
   padding: 7px 8px;
   margin: 0;
@@ -319,6 +319,7 @@
 ::ng-deep .new-conversation-button {
   width: 100%;
   justify-content: center;
+  font-size: 14px;
 }
 
 /*
@@ -331,14 +332,14 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #fff;
 }
 
 .messages {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  border: 1px solid #ccc;
-  padding: 10px;
+  padding: 10px 10px 4px;
   margin: 3px;
 
   display: flex;
@@ -389,6 +390,10 @@
   justify-content: flex-end;
   gap: 0.5rem;
   flex-wrap: wrap;
+
+  ::ng-deep .p-button {
+    font-size: 14px;
+  }
 }
 
 .message fa-icon {
@@ -411,7 +416,7 @@
 
   background-color: #e0f2f1;
   color: #004d40;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 10px;
 
   max-width: min(760px, calc(100% - 64px));
@@ -419,7 +424,9 @@
 }
 
 .message.system label {
-  background-color: #f1f3f4;
+  background-color: #fafafa;
+  border: solid 1px #f3f3f3;
+  color: #202124;
   color: #202124;
 }
 
@@ -443,7 +450,7 @@
   justify-content: center;
 
   background-color: rgba(138, 138, 138, 0.5);
-  border-radius: 18px;
+  border-radius: 8px;
   overflow: hidden;
   box-sizing: border-box;
   margin-right: 12px;
@@ -486,10 +493,40 @@
   flex: 0 0 auto;
   display: flex;
   align-items: flex-end;
-  gap: 5px;
-  padding: 5px;
-  border-top: 1px solid #ddd;
+  gap: 8px;
+  padding: 8px 8px;
+  margin: 0 12px 14px;
   box-sizing: border-box;
+  width: min(calc(100% - 24px), 1000px);
+  align-self: center;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow:
+    0 4px 20px rgba(15, 23, 42, 0.10),
+    0 1px 4px rgba(15, 23, 42, 0.06);
+  transition: box-shadow 150ms ease, border-color 150ms ease;
+
+  &:focus-within {
+    border-color: #10b981;
+    box-shadow:
+      0 0 0 3px rgba(16, 185, 129, 0.12),
+      0 4px 20px rgba(15, 23, 42, 0.10);
+  }
+
+  p-button {
+    display: flex;
+    align-items: center;
+  }
+
+  ::ng-deep .p-button {
+    height: 2.25rem;
+    padding: 0 0.6rem;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+  }
 }
 
 textarea {
@@ -499,9 +536,10 @@ textarea {
   max-height: 180px;
   resize: none;
   overflow-y: auto;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  padding: 0.4rem 0.25rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   box-sizing: border-box;
   color: #172033;
   font: inherit;
@@ -509,8 +547,6 @@ textarea {
 }
 
 textarea:focus {
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
   outline: none;
 }
 
@@ -534,6 +570,7 @@ button {
 .markdown-content {
   display: block;
   white-space: pre-wrap;
+  font-size: 15px;
 }
 
 .location-content {
