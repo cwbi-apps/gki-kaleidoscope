@@ -114,13 +114,13 @@
         (onClick)="onMapBack()"
       >
         <fa-icon [icon]="backIcon"></fa-icon>
-        <label>Back</label>
+        <label>Back to chat response map</label>
       </p-button>
 
       <button
-        *ngIf="isInspectorWorkflowStep()"
+        *ngIf="isInspectorWorkflowStep() && !attributesPanelOpen"
         type="button"
-        class="inspector-pull-tab inspector-graph-top-button relationship-tab"
+        class="relationship-btn"
         [class.active]="graphPanelOpen"
         [pTooltip]="graphPanelOpen ? 'Close Graph Visualizer' : 'Open Graph Visualizer'"
         tooltipPosition="bottom"
@@ -132,13 +132,6 @@
       <div
         class="horizontal-layout inspector-controls"
         [class.has-floating-back]="workflowStep !== WorkflowStep.DisambiguateObject">
-          <ng-container *ngIf="(previousWorkflowStep$ | async) !== WorkflowStep.DisambiguateObject">
-            <div></div>
-            <h2 class="inspector-title">
-              {{ selectedObject.properties.label }}
-            </h2>
-          </ng-container>
-
           <ng-container *ngIf="(previousWorkflowStep$ | async) === WorkflowStep.DisambiguateObject">
             <h2>Select An Object</h2>
 
@@ -206,7 +199,19 @@
           (click)="toggleAttributesPanel()">
           <fa-icon [icon]="attributesPanelOpen ? hideAttributesIcon : showAttributesIcon"></fa-icon>
         </button>
+      </div>
 
+      <div class="sidebar-top-toolbar" *ngIf="attributesPanelOpen">
+        <button
+          *ngIf="isInspectorWorkflowStep()"
+          type="button"
+          class="relationship-btn"
+          [class.active]="graphPanelOpen"
+          [pTooltip]="graphPanelOpen ? 'Close Graph Visualizer' : 'Open Graph Visualizer'"
+          tooltipPosition="right"
+          (click)="toggleGraphPanel()">
+          <fa-icon [icon]="relationshipIcon"></fa-icon>
+        </button>
       </div>
 
       <section
@@ -214,6 +219,10 @@
         *ngIf="attributesPanelOpen">
         <div class="object-pane-shell">
           <div class="object-pane-body">
+            <h2 class="inspector-title"
+                *ngIf="(previousWorkflowStep$ | async) !== WorkflowStep.DisambiguateObject">
+              {{ selectedObject.properties.label }}
+            </h2>
             <attribute-panel *ngIf="selectedObject"></attribute-panel>
           </div>
         </div>
@@ -292,7 +301,7 @@
       (onClick)="onMapBack()"
     >
       <fa-icon [icon]="backIcon"></fa-icon>
-      <label>Back</label>
+      <label>Back to chat</label>
     </p-button>
 
     <p-button
@@ -365,10 +374,13 @@
                workflowStep === WorkflowStep.ViewNeighbors
              "
            [toggleable]="true"
-           header="Layers"
            [(collapsed)]="legendCollapsed"
            (click)="onLegendPanelClick($event)"
            class="legend">
+
+      <ng-template pTemplate="header">
+        <h4>Layers</h4>
+      </ng-template>
 
     <ng-container *ngIf="orderedTypes.length > 0">
       <div cdkDropList (cdkDropListDropped)="drop($event)">

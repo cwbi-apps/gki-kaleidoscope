@@ -975,8 +975,12 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         if (this.workflowStep === WorkflowStep.DisambiguateObject) {
             this.cancelDisambiguation();
         }
-        else if (this.workflowStep === WorkflowStep.InspectObject) {
-            this.goBack();
+        else if (this.isInspectorWorkflowStep()) {
+            this.resetInspectorPanelState();
+            this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.MapAndResults }));
+        }
+        else if (this.workflowStep === WorkflowStep.MapAndResults) {
+            this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.FullScreenChat }));
         }
         else {
             this.goBack();
