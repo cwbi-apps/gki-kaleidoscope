@@ -1,0 +1,114 @@
+name: Build Image, Push to Dev
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/dev-build-image.yml"
+      - "geo-ai-explorer-ui/**"
+      - "geo-ai-explorer-api/**"
+      - "src/build/webapp/**"
+      - "**/pom.xml"
+  workflow_dispatch:
+
+concurrency:
+  group: dev-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: us-gov-west-1
+  ECR_REPOSITORY: kaleidoscope-gki/kaleidoscope
+  NODE_VERSION: "22"
+  JAVA_VERSION: "21"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: geo-ai-explorer-ui/package-lock.json
+
+      - name: Build Angular application
+        working-directory: geo-ai-explorer-ui
+        run: |
+          node --version
+          npm --version
+          npm ci --force
+          npm run build
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Build Maven project
+        run: |
+          mvn --version
+          mvn clean install -B
+
+      - name: Prepare Docker build context
+        run: |
+          rm -rf src/build/webapp/target
+          mkdir -p src/build/webapp/target
+
+          cp \
+            geo-ai-explorer-api/target/geo-ai-explorer-api.war \
+            src/build/webapp/target/geo-ai-explorer-api.war
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws-us-gov:iam::718787032875:role/github-actions-ecr-kaleidoscope-gki-kaleidoscope
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: "true"
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_SHA: ${{ github.sha }}
+        working-directory: src/build/webapp
+        run: |
+          set -euo pipefail
+
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY"
+
+          echo "Building image: $IMAGE"
+
+          docker build \
+            --tag "$IMAGE:dev" \
+            --tag "$IMAGE:latest" \
+            --tag "$IMAGE:$IMAGE_SHA" \
+            .
+
+          docker push "$IMAGE:dev"
+          docker push "$IMAGE:latest"
+          docker push "$IMAGE:$IMAGE_SHA"
+
+      - name: Log out of Amazon ECR
+        if: always()
+        run: docker logout "${{ steps.login-ecr.outputs.registry }}"
