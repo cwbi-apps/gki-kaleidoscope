@@ -361,6 +361,7 @@
         (resultsHeightChange)="onResultsHeightChange($event)"
         (resultsCollapsedChange)="onResultsCollapsedChange($event)"
         [collapsed]="resultsCollapsed"
+        [resizable]="workflowStep !== WorkflowStep.DisambiguateObject"
       ></results-table>
     </ng-container>
   </section>

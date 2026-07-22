@@ -217,6 +217,11 @@ p-tabs, p-tabpanels, p-tabpanel, graph-explorer {
   background: var(--surface-card, #fff);
   border-left: 1px solid var(--surface-border, #dfe3ea);
   overflow: visible;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
 results-table {
