@@ -352,6 +352,13 @@ results-table {
   pointer-events: auto;
 }
 
+.explorer-root.layout-inspect .disambiguate-inspector-select-button {
+  position: absolute;
+  top: 1rem;
+  right: calc(100% - var(--inspector-left-width, 30%) + 1rem);
+  pointer-events: auto;
+}
+
 .explorer-root.layout-inspect .inspector-controls h2 {
   position: absolute;
   top: 1rem;
@@ -616,9 +623,9 @@ results-table {
 
 .explorer-root.layout-disambiguate #disambiguate-header {
   grid-area: disambiguate-header;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   min-height: 58px;
   padding: 0.75rem 1rem;
@@ -640,6 +647,10 @@ results-table {
 
 .explorer-root.layout-disambiguate #disambiguate-header p-button:last-child {
   justify-self: end;
+}
+
+.disambiguate-back-button label {
+  cursor: pointer;
 }
 
 .explorer-root.layout-disambiguate .results-panel {
