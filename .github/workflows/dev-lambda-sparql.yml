@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "lambda/sparql/**"
-      - ".github/workflows/sparql.yml"
+      - ".github/workflows/dev-lambda-sparql.yml"
 
   workflow_dispatch:
 
