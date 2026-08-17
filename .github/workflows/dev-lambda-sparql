@@ -1,4 +1,4 @@
-name: Upload Name Resolution OpenSearch Lambda to Dev S3
+name: Upload SPARQL Lambda to Dev S3
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "lambda/sparql/**"
-      - ".github/workflows/dev-lambda-name-resolution.yml"
+      - ".github/workflows/sparql.yml"
 
   workflow_dispatch:
 
