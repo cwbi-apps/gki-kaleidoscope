@@ -47,10 +47,10 @@ jobs:
 
           aws s3 sync \
             agents/ \
-            "s3://${S3_BUCKET}/" \
+            "s3://${S3_BUCKET}/agents/" \
             --exclude "*" \
             --include "*.txt" \
             --delete
 
       - name: Show uploaded files
-        run: aws s3 ls "s3://${S3_BUCKET}/" --recursive
+        run: aws s3 ls "s3://${S3_BUCKET}/agents/" --recursive
