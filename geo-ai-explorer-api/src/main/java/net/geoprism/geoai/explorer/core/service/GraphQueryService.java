@@ -440,6 +440,15 @@ public class GraphQueryService
     qs.varNames().forEachRemaining(names::add);
     return names;
   }
+  
+  private boolean isUnmodifiableField(String varName)
+  {
+    return switch (varName)
+    {
+      case "uri", "resource", "subject", "s", "id" -> true;
+      default -> false;
+    };
+  }
 
   private boolean isCoreLocationField(String varName)
   {
@@ -975,8 +984,13 @@ public class GraphQueryService
       }
     }
   }
-
+  
   public void injectAttributes(LocationPage locations)
+  {
+    injectAttributes(locations, false);
+  }
+
+  public void injectAttributes(LocationPage locations, boolean includeCoreAttributes)
   {
     if (locations == null || locations.getLocations() == null)
     {
@@ -1005,7 +1019,7 @@ public class GraphQueryService
             attribute = attribute.split("-")[1];
           }
 
-          if (isCoreLocationField(attribute) || attribute.equalsIgnoreCase("asWKT"))
+          if (isUnmodifiableField(attribute) || (!includeCoreAttributes && isCoreLocationField(attribute)) || attribute.equalsIgnoreCase("asWKT"))
           {
             return;
           }
