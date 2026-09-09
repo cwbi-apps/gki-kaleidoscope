@@ -44,3 +44,24 @@ export interface LocationPage {
   sortDirection?: 'asc' | 'desc' | null;
   availableTypes?: TypeSummary[];
 }
+
+/**
+ * Returned immediately by the /api/chat/prompt/start and
+ * /api/chat/get-locations/start endpoints. The actual response is fetched
+ * by polling JobStatusResponse via the returned jobId.
+ */
+export interface JobStartResponse {
+  jobId: string;
+}
+
+/**
+ * Polled from /api/chat/prompt/status/{jobId} and
+ * /api/chat/get-locations/status/{jobId} until status is SUCCEEDED or
+ * FAILED. `result` is only populated once SUCCEEDED.
+ */
+export interface JobStatusResponse<T> {
+  jobId: string;
+  status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+  result?: T;
+  errorMessage?: string;
+}
