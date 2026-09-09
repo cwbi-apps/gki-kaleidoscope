@@ -25,6 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -33,8 +34,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import net.geoprism.geoai.explorer.core.config.AppProperties;
 import net.geoprism.geoai.explorer.core.model.Graph;
+import net.geoprism.geoai.explorer.core.model.JobStatusResponse;
 import net.geoprism.geoai.explorer.core.model.Location;
 import net.geoprism.geoai.explorer.core.model.LocationPage;
+import net.geoprism.geoai.explorer.core.service.AsyncJobService;
 import net.geoprism.geoai.explorer.core.service.GraphQueryService;
 import net.geoprism.geoai.explorer.core.service.search.BasicSearchService;
 import software.amazon.awssdk.utils.StringUtils;
@@ -45,12 +48,15 @@ public class ExplorerController
 {
   @Autowired
   private GraphQueryService graph;
-  
+
   @Autowired
   private BasicSearchService search;
-  
+
   @Autowired
   protected AppProperties    properties;
+
+  @Autowired
+  private AsyncJobService    jobs;
 
   @PostMapping("/api/neighbors")
   @ResponseBody
@@ -62,18 +68,59 @@ public class ExplorerController
     {
       return ResponseEntity.badRequest().build();
     }
-    
-    String sExclude = request.get("excludedTypes");
-    List<String> exclude = new ArrayList<String>();
-    if (!StringUtils.isBlank(sExclude)) {
-    	exclude = Arrays.asList(sExclude.split(","));
-    }
+
+    List<String> exclude = parseExcludedTypes(request);
 
     Graph graph = this.graph.neighbors(uri, exclude);
 
     return new ResponseEntity<Graph>(graph, HttpStatus.OK);
   }
-  
+
+  /*
+   * neighbors() runs a SPARQL graph query that can be slow for
+   * highly-connected nodes -- long enough to exceed the load balancer's 60
+   * second idle timeout and produce a 504 Gateway Timeout. As with the
+   * chat endpoints, this kicks the query off in the background (see
+   * AsyncJobService) and immediately hands the caller a job id to poll via
+   * neighborsStatus() below.
+   */
+  @PostMapping("/api/neighbors/start")
+  @ResponseBody
+  public ResponseEntity<Map<String, String>> startNeighbors(@RequestBody Map<String, String> request)
+  {
+    String uri = request.get("uri");
+
+    if (uri == null || uri.isBlank())
+    {
+      return ResponseEntity.badRequest().build();
+    }
+
+    List<String> exclude = parseExcludedTypes(request);
+
+    String jobId = this.jobs.submit(() -> this.graph.neighbors(uri, exclude));
+
+    return new ResponseEntity<Map<String, String>>(Map.of("jobId", jobId), HttpStatus.ACCEPTED);
+  }
+
+  @GetMapping("/api/neighbors/status/{jobId}")
+  @ResponseBody
+  public ResponseEntity<JobStatusResponse> neighborsStatus(@PathVariable(name = "jobId") String jobId)
+  {
+    return new ResponseEntity<JobStatusResponse>(this.jobs.getStatus(jobId), HttpStatus.OK);
+  }
+
+  private List<String> parseExcludedTypes(Map<String, String> request)
+  {
+    String sExclude = request.get("excludedTypes");
+
+    if (StringUtils.isBlank(sExclude))
+    {
+      return new ArrayList<String>();
+    }
+
+    return Arrays.asList(sExclude.split(","));
+  }
+
   @PostMapping("/api/full-text-lookup")
   @ResponseBody
   public ResponseEntity<LocationPage> fullTextLookup(@RequestBody Map<String, String> request)

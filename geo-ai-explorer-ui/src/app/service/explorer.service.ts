@@ -7,7 +7,8 @@ import { GprGraph } from '../graph-explorer/graph-explorer.component';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { firstValueFrom } from 'rxjs';
-import { LocationPage } from '../models/chat.model';
+import { JobStartResponse, LocationPage } from '../models/chat.model';
+import { pollJob } from './job-polling.util';
 
 export interface SPARQLResultSetBinding {
     type: string, value: string, datatype?: string
@@ -55,8 +56,18 @@ export class ExplorerService {
     //     }, 3000); // Simulating 3-second network delay
     // });
 
-    // Uncomment below to make a real HTTP request
-    return firstValueFrom(this.http.post<GprGraph>(environment.apiUrl + 'api/neighbors', { uri: uri, excludedTypes: sExcludedTypes }));
+    /*
+     * This neighbor lookup runs a SPARQL graph query on the server that can
+     * be slow for highly-connected nodes -- long enough to exceed the ALB's
+     * 60 second idle timeout and produce a 504 Gateway Timeout. As with
+     * chat/prompt and chat/get-locations, the server now kicks the query
+     * off in the background and returns a job id immediately; we poll its
+     * status (see job-polling.util.ts) until it completes. The returned
+     * Promise still resolves/rejects exactly as before, so callers (and
+     * their loading spinners) need no changes.
+     */
+    return firstValueFrom(this.http.post<JobStartResponse>(environment.apiUrl + 'api/neighbors/start', { uri: uri, excludedTypes: sExcludedTypes }))
+      .then(({ jobId }) => pollJob<GprGraph>(this.http, environment.apiUrl + 'api/neighbors/status/' + jobId));
   }
 
   fullTextLookup(query: string): Promise<LocationPage> {

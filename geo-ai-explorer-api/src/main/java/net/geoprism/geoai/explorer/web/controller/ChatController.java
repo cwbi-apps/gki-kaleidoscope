@@ -17,6 +17,7 @@ package net.geoprism.geoai.explorer.web.controller;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,9 +34,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import net.geoprism.geoai.explorer.core.model.History;
+import net.geoprism.geoai.explorer.core.model.JobStatusResponse;
 import net.geoprism.geoai.explorer.core.model.LocationPage;
 import net.geoprism.geoai.explorer.core.model.Message;
 import net.geoprism.geoai.explorer.core.model.PageRequest;
+import net.geoprism.geoai.explorer.core.service.AsyncJobService;
 import net.geoprism.geoai.explorer.core.service.ChatService;
 
 @RestController
@@ -43,6 +47,9 @@ public class ChatController
 {
   @Autowired
   private ChatService service;
+
+  @Autowired
+  private AsyncJobService jobs;
 
   @GetMapping("/api/chat/prompt")
   @ResponseBody
@@ -53,6 +60,30 @@ public class ChatController
     return new ResponseEntity<Message>(response, HttpStatus.OK);
   }
 
+  /*
+   * The chat agent invokes a Bedrock AgentCore harness that can take up to
+   * several minutes to respond -- well beyond the load balancer's 60
+   * second idle timeout, which was causing 504 Gateway Timeout errors on
+   * this endpoint. Rather than blocking the request thread, this kicks the
+   * work off in the background (see AsyncJobService) and immediately hands
+   * the caller a job id to poll via promptStatus() below.
+   */
+  @GetMapping("/api/chat/prompt/start")
+  @ResponseBody
+  public ResponseEntity<Map<String, String>> startPrompt(@RequestParam(name = "sessionId") String sessionId, @RequestParam(name = "prompt") String prompt)
+  {
+    String jobId = this.jobs.submit(() -> this.service.prompt(sessionId, prompt));
+
+    return new ResponseEntity<Map<String, String>>(Map.of("jobId", jobId), HttpStatus.ACCEPTED);
+  }
+
+  @GetMapping("/api/chat/prompt/status/{jobId}")
+  @ResponseBody
+  public ResponseEntity<JobStatusResponse> promptStatus(@PathVariable(name = "jobId") String jobId)
+  {
+    return new ResponseEntity<JobStatusResponse>(this.jobs.getStatus(jobId), HttpStatus.OK);
+  }
+
   @PostMapping("/api/chat/get-locations")
   @ResponseBody
   public ResponseEntity<List<LocationPage>> getLocations(@RequestBody History history)
@@ -60,6 +91,28 @@ public class ChatController
     List<LocationPage> response = this.service.getLocations(history);
 
     return new ResponseEntity<List<LocationPage>>(response, HttpStatus.OK);
+  }
+
+  /*
+   * See startPrompt() above -- getLocations() also invokes a Bedrock
+   * AgentCore harness (to translate the chat history into a SPARQL
+   * statement) and can exceed the load balancer's 60 second timeout, so it
+   * gets the same background-job treatment.
+   */
+  @PostMapping("/api/chat/get-locations/start")
+  @ResponseBody
+  public ResponseEntity<Map<String, String>> startGetLocations(@RequestBody History history)
+  {
+    String jobId = this.jobs.submit(() -> this.service.getLocations(history));
+
+    return new ResponseEntity<Map<String, String>>(Map.of("jobId", jobId), HttpStatus.ACCEPTED);
+  }
+
+  @GetMapping("/api/chat/get-locations/status/{jobId}")
+  @ResponseBody
+  public ResponseEntity<JobStatusResponse> getLocationsStatus(@PathVariable(name = "jobId") String jobId)
+  {
+    return new ResponseEntity<JobStatusResponse>(this.jobs.getStatus(jobId), HttpStatus.OK);
   }
 
   @PostMapping("/api/chat/get-page")
