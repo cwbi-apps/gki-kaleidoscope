@@ -24,8 +24,8 @@ if ! grep -q "RemoteIpValve" "$SERVER_XML"; then
       print "               internalProxies=\".*\""
       print "               remoteIpHeader=\"x-forwarded-for\""
       print "               protocolHeader=\"x-forwarded-proto\""
-      print "               protocolHeaderHttpsValue=\"https\""
-      print "               portHeader=\"x-forwarded-port\" />"
+      print "               protocolHeaderHttpsValue=\"http\""
+      print "               httpsServerPort=\"443\" />"
       inserted = 1
       in_host = 0
     }
