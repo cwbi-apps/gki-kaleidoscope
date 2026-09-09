@@ -57,7 +57,7 @@ public class GraphQueryService
   protected String buildPrefixes()
   {
     return """
-      PREFIX obj: <%s#>
+      PREFIX obj: <%s>
       PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX geo: <http://www.opengis.net/ont/geosparql#>
       PREFIX spatialF: <http://jena.apache.org/function/spatial#>
@@ -105,7 +105,7 @@ public class GraphQueryService
   protected String buildNeighborQuery()
   {
     return """
-      PREFIX obj: <%s#>
+      PREFIX obj: <%s>
       PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX geo: <http://www.opengis.net/ont/geosparql#>
       PREFIX spatialF: <http://jena.apache.org/function/spatial#>
@@ -172,7 +172,7 @@ public class GraphQueryService
   protected String buildNeighborMetadataQuery()
   {
     return """
-      PREFIX obj: <%s#>
+      PREFIX obj: <%s>
       PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX geo: <http://www.opengis.net/ont/geosparql#>
 
