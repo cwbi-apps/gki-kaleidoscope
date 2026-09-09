@@ -21,6 +21,7 @@ if ! grep -q "RemoteIpValve" "$SERVER_XML"; then
 
     in_host && />/ && !inserted {
       print "        <Valve className=\"org.apache.catalina.valves.RemoteIpValve\""
+      print "               internalProxies=\".*\""
       print "               remoteIpHeader=\"x-forwarded-for\""
       print "               protocolHeader=\"x-forwarded-proto\""
       print "               protocolHeaderHttpsValue=\"https\""
