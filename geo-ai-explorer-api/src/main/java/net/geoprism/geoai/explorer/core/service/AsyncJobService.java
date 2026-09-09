@@ -18,16 +18,15 @@ package net.geoprism.geoai.explorer.core.service;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PreDestroy;
 import net.geoprism.geoai.explorer.core.model.GenericRestException;
 import net.geoprism.geoai.explorer.core.model.JobStatusResponse;
 
@@ -70,9 +69,34 @@ public class AsyncJobService
 
   private final Map<String, Job> jobs = new ConcurrentHashMap<>();
 
-  @Autowired
-  @Qualifier("taskExecutor")
-  private Executor executor;
+  /*
+   * This service owns its own background thread pool rather than reusing
+   * WebConfiguration's "taskExecutor" bean. That bean lives in the web
+   * module and exists purely to back Spring MVC's async request handling;
+   * depending on it here would pull core services into the web module's
+   * application context, which breaks plain core-context tests (like
+   * HistoryTest) that never load WebConfiguration. Sized the same as that
+   * bean, for the same reasons.
+   */
+  private final ThreadPoolTaskExecutor executor;
+
+  public AsyncJobService()
+  {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(2);
+    executor.setMaxPoolSize(10);
+    executor.setQueueCapacity(1000);
+    executor.setThreadNamePrefix("async-job-");
+    executor.initialize();
+
+    this.executor = executor;
+  }
+
+  @PreDestroy
+  public void shutdown()
+  {
+    this.executor.shutdown();
+  }
 
   /**
    * Submits work to run in the background and returns a job id that can be
