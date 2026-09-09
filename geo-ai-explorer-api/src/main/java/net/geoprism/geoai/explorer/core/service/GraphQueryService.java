@@ -57,7 +57,7 @@ public class GraphQueryService
   protected String buildPrefixes()
   {
     return """
-      PREFIX obj: <%s#>
+      PREFIX obj: <%s>
       PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX geo: <http://www.opengis.net/ont/geosparql#>
       PREFIX spatialF: <http://jena.apache.org/function/spatial#>
@@ -105,7 +105,7 @@ public class GraphQueryService
   protected String buildNeighborQuery()
   {
     return """
-      PREFIX obj: <%s#>
+      PREFIX obj: <%s>
       PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX geo: <http://www.opengis.net/ont/geosparql#>
       PREFIX spatialF: <http://jena.apache.org/function/spatial#>
@@ -172,7 +172,7 @@ public class GraphQueryService
   protected String buildNeighborMetadataQuery()
   {
     return """
-      PREFIX obj: <%s#>
+      PREFIX obj: <%s>
       PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX geo: <http://www.opengis.net/ont/geosparql#>
 
@@ -439,6 +439,15 @@ public class GraphQueryService
     List<String> names = new ArrayList<>();
     qs.varNames().forEachRemaining(names::add);
     return names;
+  }
+  
+  private boolean isUnmodifiableField(String varName)
+  {
+    return switch (varName)
+    {
+      case "uri", "resource", "subject", "s", "id" -> true;
+      default -> false;
+    };
   }
 
   private boolean isCoreLocationField(String varName)
@@ -975,8 +984,13 @@ public class GraphQueryService
       }
     }
   }
-
+  
   public void injectAttributes(LocationPage locations)
+  {
+    injectAttributes(locations, false);
+  }
+
+  public void injectAttributes(LocationPage locations, boolean includeCoreAttributes)
   {
     if (locations == null || locations.getLocations() == null)
     {
@@ -1005,7 +1019,7 @@ public class GraphQueryService
             attribute = attribute.split("-")[1];
           }
 
-          if (isCoreLocationField(attribute) || attribute.equalsIgnoreCase("asWKT"))
+          if (isUnmodifiableField(attribute) || (!includeCoreAttributes && isCoreLocationField(attribute)) || attribute.equalsIgnoreCase("asWKT"))
           {
             return;
           }

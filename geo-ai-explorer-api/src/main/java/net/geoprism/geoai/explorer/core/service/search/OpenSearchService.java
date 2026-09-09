@@ -177,6 +177,10 @@ public class OpenSearchService extends BasicSearchService
       page.setLimit(limit);
       page.setOffset(offset);
       page.setStatement(buildDebugStatement(query, offset, limit));
+      
+      // It's possible OpenSearch doesn't have all the attributes / geometries that we need. We're going to inject them if they're missing.
+      graph.injectAttributes(page, true);
+      graph.injectGeometries(page);
 
       return page;
     }
