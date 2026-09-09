@@ -4,6 +4,7 @@
 
 FROM tomcat:11-jdk17
 
+ENV SERVER_FORWARD_HEADERS_STRATEGY=framework
 ENV LOG_LEVEL=error
 
 RUN mkdir -p $CATALINA_HOME/wars
