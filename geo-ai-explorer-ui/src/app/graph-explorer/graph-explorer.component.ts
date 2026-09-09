@@ -292,7 +292,8 @@ export class GraphExplorerComponent implements AfterViewInit, OnDestroy {
     // are both non-zero, so a zero-edge object gets stuck with `initialized = false`
     // and nothing draws. Resizing the window fixes it because that also
     // calls update(). We do the same thing here after a short delay, only if
-    // it's still stuck.
+    // it's still stuck. More targeted rendering workarounds were attempted, but this
+    // solution was eventually selected as a balance between simplicity and accuracy
     setTimeout(() => {
       if (this.graph && !this.graph.initialized) {
         this.graph.update();
