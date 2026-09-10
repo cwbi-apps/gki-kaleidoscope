@@ -496,42 +496,36 @@ public class GraphQueryService
 
   public Long getCount(String statement)
   {
-    Map<String, Long> holder = new HashMap<>();
+      Map<String, Long> holder = new HashMap<>();
 
-    statement = normalizeLocationStatement(statement);
+      statement = normalizeLocationStatement(statement);
 
-    StringBuilder sparql = new StringBuilder();
+      StringBuilder sparql = new StringBuilder();
 
-    int selectIndex = statement.toUpperCase().indexOf("SELECT");
-    int fromIndex = statement.toUpperCase().indexOf("FROM");
-    int whereIndex = statement.toUpperCase().indexOf("WHERE");
-    int groupByIndex = statement.toUpperCase().indexOf("GROUP BY");
+      int selectIndex = indexOfKeyword(statement, "SELECT");
+      int fromIndex = indexOfKeyword(statement, "FROM");
+      int whereIndex = indexOfKeyword(statement, "WHERE");
 
-    // Prefix section
-    sparql.append(statement.substring(0, selectIndex));
-    sparql.append("SELECT (COUNT(distinct ?uri) AS ?count)\n");
+      sparql.append(statement, 0, selectIndex);
+      sparql.append("SELECT (COUNT(DISTINCT ?uri) AS ?count)\n");
 
-    if (groupByIndex != -1)
-    {
-      sparql.append(statement.substring(fromIndex, groupByIndex));
-    }
-    else if (fromIndex != -1)
-    {
-      sparql.append(statement.substring(fromIndex));
-    }
-    else
-    {
+      // Only treat FROM as a dataset clause if it occurs
+      // between SELECT and WHERE.
+      if (fromIndex != -1 && fromIndex < whereIndex)
+      {
+          sparql.append(statement, fromIndex, whereIndex);
+      }
+
       sparql.append(statement.substring(whereIndex));
-    }
 
-    try (RDFConnection conn = this.createConnection())
-    {
-      conn.querySelect(sparql.toString(), (qs) -> {
-        holder.put("count", qs.getLiteral("count").getLong());
-      });
+      try (RDFConnection conn = this.createConnection())
+      {
+          conn.querySelect(sparql.toString(), (qs) -> {
+              holder.put("count", qs.getLiteral("count").getLong());
+          });
 
-      return holder.getOrDefault("count", 0L);
-    }
+          return holder.getOrDefault("count", 0L);
+      }
   }
 
   public List<TypeSummary> getTypeCounts(String statement)

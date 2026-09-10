@@ -46,6 +46,12 @@ public class BedrockService
           ".*<name>(.*?)<\\/name>.*",
           Pattern.DOTALL
       );
+  
+  private static final Pattern REASONING_PATTERN =
+      Pattern.compile(
+          "<reasoning\\b[^>]*>(.*?)</reasoning\\s*>",
+          Pattern.DOTALL | Pattern.CASE_INSENSITIVE
+      );
 
   @Autowired
   private AppProperties properties;
@@ -70,6 +76,9 @@ public class BedrockService
         chatPromptService.getPrompt(),
         inputText
     );
+    
+    String reasoning = extractReasoning(value);
+    value = stripReasoning(value);
 
     Matcher matcher =
         LOCATION_NAME_PATTERN.matcher(value);
@@ -90,6 +99,8 @@ public class BedrockService
         );
 
     Message message = new Message();
+    
+    message.setReasoning(reasoning);
 
     message.setContent(
         value
@@ -113,6 +124,26 @@ public class BedrockService
     }
 
     return message;
+  }
+  
+  private String extractReasoning(String response)
+  {
+      Matcher matcher = REASONING_PATTERN.matcher(response);
+
+      if (matcher.find())
+      {
+          return matcher.group(1).trim();
+      }
+
+      return null;
+  }
+
+  private String stripReasoning(String response)
+  {
+      return REASONING_PATTERN
+          .matcher(response)
+          .replaceAll("")
+          .trim();
   }
 
   public String getLocationSparql(

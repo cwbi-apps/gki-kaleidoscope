@@ -17,7 +17,8 @@ import {
   faPencil,
   faMapLocation,
   faFloppyDisk,
-  faTrash
+  faTrash,
+  faBrain
 } from '@fortawesome/free-solid-svg-icons';
 
 import { ChatService } from '../service/chat-service.service';
@@ -94,6 +95,7 @@ export class AichatComponent {
 
   public messageUserIcon = faUser;
   public messageSenderIcon = faUpRightAndDownLeftFromCenter;
+  public reasoningIcon = faBrain;
 
   private store = inject(Store);
 
@@ -590,7 +592,8 @@ export class AichatComponent {
             mappable: response.mappable,
             ambiguous: response.ambiguous,
             loading: false,
-            location: response.location
+            location: response.location,
+            reasoning: response.reasoning
           });
 
           this.refreshRenderedMessages();

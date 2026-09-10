@@ -61,7 +61,8 @@ export class ChatService {
             mappable: response.mappable,
             ambiguous: response.ambiguous,
             purpose: 'standard',
-            location: response.location
+            location: response.location,
+            reasoning: response.reasoning
           };
           return chatMessage;
         });

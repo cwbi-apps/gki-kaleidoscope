@@ -17,6 +17,12 @@ export interface ChatMessage {
   sections?: MessageSection[];
   loading?: boolean;
   purpose: 'info' | 'standard'
+  /**
+   * Optional chain-of-thought / rationale the model produced alongside its
+   * answer. When present, the UI surfaces it via a hover popup instead of
+   * showing it inline with the response.
+   */
+  reasoning?: string;
 }
 
 export interface ServerChatResponse {
@@ -26,6 +32,7 @@ export interface ServerChatResponse {
   ambiguous: boolean;
   conversationTitle?: string;
   location?: string;
+  reasoning?: string;
 }
 
 export interface TypeSummary {

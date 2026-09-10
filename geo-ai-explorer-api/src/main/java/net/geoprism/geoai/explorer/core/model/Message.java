@@ -9,6 +9,8 @@ public class Message
    * Content of the message
    */
   private String  content;
+  
+  private String reasoning;
 
   /**
    * Session if of the conversation

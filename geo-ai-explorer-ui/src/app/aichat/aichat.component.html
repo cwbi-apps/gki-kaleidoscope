@@ -200,6 +200,17 @@
             </ng-container>
 
             <ng-container *ngIf="!msg.loading">
+              <div
+                *ngIf="msg.reasoning"
+                class="reasoning-toggle"
+                pTooltip
+                [pTooltip]="msg.reasoning"
+                tooltipPosition="top"
+                tooltipStyleClass="reasoning-tooltip">
+                <fa-icon [icon]="reasoningIcon"></fa-icon>
+                <span>Reasoning</span>
+              </div>
+
               <ng-container *ngIf="msg.hasLocationSections; else markdownMessage">
                 <span class="location-content">
                   <ng-container *ngFor="let section of msg.renderedSections">
