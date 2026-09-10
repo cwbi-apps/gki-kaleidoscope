@@ -1,0 +1,8 @@
+# Test-only dependencies for lambda/replication-neptune-opensearch.
+# The lambda's own runtime deps (boto3, requests, requests_aws4auth) are
+# also needed to import new.py; moto/pytest are test-only.
+pytest>=8.0
+boto3>=1.34
+requests>=2.31
+requests_aws4auth>=1.2
+moto[dynamodb]>=5.0
