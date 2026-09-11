@@ -1,5 +1,5 @@
 """
-Basic functional tests for lambda/replication-neptune-opensearch/new.py.
+Basic functional tests for lambda/replication-neptune-opensearch/main.py.
 
 Run with (from this `tests/` directory or anywhere above it):
 
