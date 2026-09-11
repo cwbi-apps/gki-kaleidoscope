@@ -1,10 +1,11 @@
 import { NgIf } from '@angular/common';
 import { Component, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
     selector: 'app-root',
-    imports: [RouterOutlet, NgIf],
+    imports: [RouterOutlet, NgIf, TooltipModule],
     templateUrl: './app.component.html',
     styleUrl: './app.component.scss'
 })
