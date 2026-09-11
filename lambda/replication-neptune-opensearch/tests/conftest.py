@@ -1,5 +1,5 @@
 """
-Shared fixtures for testing lambda/replication-neptune-opensearch/new.py.
+Shared fixtures for testing lambda/replication-neptune-opensearch/main.py.
 
 These tests never talk to a real Neptune cluster, DynamoDB table, or
 OpenSearch domain - they simulate a deployed environment by faking each
@@ -11,7 +11,7 @@ external dependency:
     `_bulk` HTTP endpoint) are faked with a small in-test HTTP router
     (see `HttpMock` below) that stands in for `requests.get`/`requests.post`.
 
-`new.py` reads its configuration from environment variables and creates
+`main.py` reads its configuration from environment variables and creates
 its boto3 DynamoDB resource/table at *import time*, so tests must control
 the environment *before* importing it. `_import_fresh` below reloads the
 module from disk under whatever environment the test needs, so nothing
@@ -27,7 +27,7 @@ import pytest
 from moto import mock_aws
 
 
-MODULE_PATH = Path(__file__).resolve().parent.parent / "new.py"
+MODULE_PATH = Path(__file__).resolve().parent.parent / "main.py"
 
 # A complete, valid "deployed" environment. Individual tests override or
 # remove keys from this baseline via the `load_module` fixture.
@@ -45,10 +45,10 @@ DEFAULT_ENV = {
 
 
 def _import_fresh():
-    """Exec new.py from disk as a brand new, uncached module object."""
+    """Exec main.py from disk as a brand new, uncached module object."""
 
     spec = importlib.util.spec_from_file_location(
-        "replication_neptune_opensearch_new", MODULE_PATH
+        "replication_neptune_opensearch_main", MODULE_PATH
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -60,7 +60,7 @@ def load_module(monkeypatch):
     """
     Factory fixture: load_module(overrides={...}, remove=[...]) sets the
     default environment (with any overrides applied and any `remove` keys
-    deleted), then imports new.py fresh under it.
+    deleted), then imports main.py fresh under it.
     """
 
     def _load(overrides=None, remove=None):

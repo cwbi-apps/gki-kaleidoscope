@@ -401,6 +401,56 @@
   color: white;
 }
 
+/*
+ * Reasoning hover popup
+ * Shown on system messages that carry an optional `reasoning` field from
+ * the chat API -- a small hover target that reveals the model's rationale
+ * via a pTooltip rather than cluttering the answer itself.
+ */
+
+.message .reasoning-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: flex-start;
+  margin-bottom: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-card);
+  color: var(--text-color-secondary);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: help;
+  user-select: none;
+}
+
+.message .reasoning-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text-color);
+}
+
+.message .reasoning-toggle fa-icon {
+  color: #9880ff;
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+::ng-deep .reasoning-tooltip {
+  max-width: 480px !important;
+
+  .p-tooltip-text {
+    display: block;
+    width: max-content;
+    min-width: 260px;
+    max-width: 480px !important;
+    white-space: pre-line;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    text-align: left;
+  }
+}
+
 .message strong {
   display: block;
   text-align: right;

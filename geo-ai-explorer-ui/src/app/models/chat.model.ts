@@ -17,6 +17,23 @@ export interface ChatMessage {
   sections?: MessageSection[];
   loading?: boolean;
   purpose: 'info' | 'standard'
+  /**
+   * Optional chain-of-thought / rationale the model produced alongside its
+   * answer. When present, the UI surfaces it via a hover popup instead of
+   * showing it inline with the response.
+   */
+  reasoning?: string;
+  /**
+   * Set only while `loading` is true, on the placeholder message created
+   * for an in-flight chat/prompt job. Points at that job's status endpoint
+   * (see job-polling.util.ts) and is persisted to localStorage alongside
+   * the rest of the conversation, so that if the page is closed or
+   * reloaded before the job finishes, AichatComponent can resume polling
+   * it on the next boot -- or, if the server no longer recognizes the job
+   * (e.g. it restarted since), mark the message failed instead of leaving
+   * it stuck on a permanent busy spinner. Cleared once the job settles.
+   */
+  pendingStatusUrl?: string;
 }
 
 export interface ServerChatResponse {
@@ -26,6 +43,7 @@ export interface ServerChatResponse {
   ambiguous: boolean;
   conversationTitle?: string;
   location?: string;
+  reasoning?: string;
 }
 
 export interface TypeSummary {
