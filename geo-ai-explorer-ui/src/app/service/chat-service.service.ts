@@ -35,7 +35,15 @@ export class ChatService {
   }
 
 
-  sendMessage(sessionId: string, message: ChatMessage): Promise<ChatMessage> {
+  /**
+   * @param onJobStarted Invoked synchronously (before the job completes)
+   * with the job's status URL, as soon as it's known. AichatComponent uses
+   * this to stamp the status URL onto its "AI is thinking" placeholder
+   * message and persist it, so that if the page is closed or reloaded
+   * before the job settles, it can resume polling (or fail the message
+   * cleanly) on the next boot via {@link resumePrompt}.
+   */
+  sendMessage(sessionId: string, message: ChatMessage, onJobStarted?: (statusUrl: string) => void): Promise<ChatMessage> {
 
     if (environment.mockRequests)
     {
@@ -52,21 +60,39 @@ export class ChatService {
       params = params.append("prompt", message.text);
 
       return firstValueFrom(this.http.get<JobStartResponse>(environment.apiUrl + 'api/chat/prompt/start', { params }))
-        .then(({ jobId }) => pollJob<ServerChatResponse>(this.http, environment.apiUrl + 'api/chat/prompt/status/' + jobId))
-        .then(response => {
-          const chatMessage: ChatMessage = {
-            id: uuidv4(),
-            sender: 'system',
-            text: response.content,
-            mappable: response.mappable,
-            ambiguous: response.ambiguous,
-            purpose: 'standard',
-            location: response.location,
-            reasoning: response.reasoning
-          };
-          return chatMessage;
-        });
+        .then(({ jobId }) => {
+          const statusUrl = environment.apiUrl + 'api/chat/prompt/status/' + jobId;
+          onJobStarted?.(statusUrl);
+          return pollJob<ServerChatResponse>(this.http, statusUrl);
+        })
+        .then(response => this.toChatMessage(response));
     }
+  }
+
+  /**
+   * Resumes polling a chat/prompt job from a status URL that was previously
+   * handed to `onJobStarted` in {@link sendMessage}. Used on app boot to
+   * recover a message that was left mid-flight because the page was closed
+   * or reloaded before the original request settled -- see
+   * AichatComponent.reconcilePendingJobs. Resolves/rejects exactly like
+   * sendMessage's returned Promise (including a fast rejection if the
+   * server no longer recognizes the job).
+   */
+  resumePrompt(statusUrl: string): Promise<ChatMessage> {
+    return pollJob<ServerChatResponse>(this.http, statusUrl).then(response => this.toChatMessage(response));
+  }
+
+  private toChatMessage(response: ServerChatResponse): ChatMessage {
+    return {
+      id: uuidv4(),
+      sender: 'system',
+      text: response.content,
+      mappable: response.mappable,
+      ambiguous: response.ambiguous,
+      purpose: 'standard',
+      location: response.location,
+      reasoning: response.reasoning
+    };
   }
 
   getLocations(messages: ChatMessage[], offset: number, limit: number): Promise<LocationPage[]> {

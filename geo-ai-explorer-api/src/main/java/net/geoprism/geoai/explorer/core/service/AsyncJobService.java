@@ -62,6 +62,35 @@ public class AsyncJobService
    */
   private static final long RETENTION_MILLIS = 30 * 60 * 1000L;
 
+  /*
+   * Hard ceiling on how long a job may sit in PENDING/RUNNING before it is
+   * force-marked FAILED, regardless of what the background task is doing.
+   *
+   * The task itself (Bedrock AgentCore calls, SPARQL/Neptune queries, ...)
+   * is expected to fail on its own well before this via its own timeouts --
+   * but not every downstream client is guaranteed to have one configured
+   * correctly, and a hung task would otherwise leave the job RUNNING
+   * forever with no way for a client to ever learn it isn't coming back.
+   * This is the backstop that guarantees getStatus() always reaches a
+   * terminal state in bounded time.
+   *
+   * Kept slightly under the front-end's own polling deadline (see
+   * job-polling.util.ts, MAX_POLL_DURATION_MS = 15 minutes) so the client
+   * gets a clean, descriptive FAILED status from here instead of racing its
+   * own client-side timeout. (Also gives chat/prompt and chat/get-locations
+   * room to exhaust their 3-attempt Bedrock retry policy in ChatService --
+   * up to ~15 minutes at 5 minutes per attempt -- without this watchdog
+   * cutting them off mid-retry.)
+   *
+   * Note this does not (and cannot, in general) interrupt the background
+   * thread -- a task stuck in a downstream call with no timeout of its own
+   * may keep running after its job has been marked FAILED. Configuring
+   * proper timeouts on every downstream client remains the real fix; this
+   * is only the safety net that keeps that failure mode from reaching the
+   * user as a stuck spinner.
+   */
+  private static final long MAX_JOB_DURATION_MILLIS = 14 * 60 * 1000L;
+
   public enum Status
   {
     PENDING, RUNNING, SUCCEEDED, FAILED
@@ -109,26 +138,45 @@ public class AsyncJobService
     Job job = new Job();
     this.jobs.put(jobId, job);
 
-    this.executor.execute(() -> {
-      job.status = Status.RUNNING;
+    try
+    {
+      this.executor.execute(() -> {
+        job.status = Status.RUNNING;
 
-      try
-      {
-        job.result = task.get();
-        job.status = Status.SUCCEEDED;
-      }
-      catch (Exception e)
-      {
-        log.error("Async job [{}] failed.", jobId, e);
+        try
+        {
+          job.result = task.get();
+          job.status = Status.SUCCEEDED;
+        }
+        catch (Exception e)
+        {
+          log.error("Async job [{}] failed.", jobId, e);
 
-        job.errorMessage = resolveErrorMessage(e);
-        job.status = Status.FAILED;
-      }
-      finally
-      {
-        job.completedAt = System.currentTimeMillis();
-      }
-    });
+          job.errorMessage = resolveErrorMessage(e);
+          job.status = Status.FAILED;
+        }
+        finally
+        {
+          job.completedAt = System.currentTimeMillis();
+        }
+      });
+    }
+    catch (Exception e)
+    {
+      /*
+       * The executor's queue is bounded (1000): under sustained overload
+       * execute() can reject synchronously instead of ever running the
+       * task. Without this, the job would sit in the map as PENDING
+       * forever -- indistinguishable from a job that is legitimately about
+       * to start -- and a polling client would never learn it was never
+       * scheduled.
+       */
+      log.error("Failed to schedule async job [{}].", jobId, e);
+
+      job.errorMessage = "The server is too busy to process your request right now. Please try again in a moment.";
+      job.status = Status.FAILED;
+      job.completedAt = System.currentTimeMillis();
+    }
 
     return jobId;
   }
@@ -146,7 +194,34 @@ public class AsyncJobService
       throw new GenericRestException("The requested job could not be found. It may have expired -- please try your request again.");
     }
 
+    failIfStale(jobId, job);
+
     return new JobStatusResponse(jobId, job.status.name(), job.result, job.errorMessage);
+  }
+
+  /**
+   * Force-marks a job FAILED if it has been PENDING/RUNNING for longer than
+   * {@link #MAX_JOB_DURATION_MILLIS}. See that constant for why this
+   * exists. Safe to call concurrently/redundantly -- only the first caller
+   * to observe a stale job actually flips its state.
+   */
+  private void failIfStale(String jobId, Job job)
+  {
+    if ((job.status == Status.PENDING || job.status == Status.RUNNING)
+        && System.currentTimeMillis() - job.startedAt > MAX_JOB_DURATION_MILLIS)
+    {
+      synchronized (job)
+      {
+        if (job.status == Status.PENDING || job.status == Status.RUNNING)
+        {
+          log.error("Async job [{}] exceeded the maximum allowed duration of {} ms and was force-marked FAILED. The background task may still be executing.", jobId, MAX_JOB_DURATION_MILLIS);
+
+          job.status = Status.FAILED;
+          job.errorMessage = "Your request took too long to complete. Please try again.";
+          job.completedAt = System.currentTimeMillis();
+        }
+      }
+    }
   }
 
   private String resolveErrorMessage(Exception e)
@@ -175,11 +250,25 @@ public class AsyncJobService
     });
   }
 
+  /**
+   * Self-heals jobs that have run past {@link #MAX_JOB_DURATION_MILLIS}
+   * even if no client happens to be polling them right now, so a job can
+   * never sit RUNNING indefinitely just because nobody asked about it.
+   * Requires @EnableScheduling to be active somewhere in the application
+   * context.
+   */
+  @Scheduled(fixedDelay = 30 * 1000L)
+  public void failStaleJobs()
+  {
+    this.jobs.forEach(this::failIfStale);
+  }
+
   private static final class Job
   {
     private volatile Status status      = Status.PENDING;
     private volatile Object result;
     private volatile String errorMessage;
+    private final long      startedAt   = System.currentTimeMillis();
     private volatile long   completedAt = 0;
   }
 }

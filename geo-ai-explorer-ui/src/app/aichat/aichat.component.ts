@@ -143,6 +143,7 @@ export class AichatComponent {
     });
 
     this.loadConversations();
+    this.reconcilePendingJobs();
 
     this.onWorkflowStepChange = combineLatest([
       this.workflowStep$,
@@ -573,7 +574,14 @@ export class AichatComponent {
     const systemMessageId = system.id;
     const sessionId = conversation.sessionId;
 
-    this.chatService.sendMessage(sessionId, message)
+    this.chatService.sendMessage(sessionId, message, statusUrl => {
+      // Persist the job's status URL onto the placeholder message so that
+      // if the page is closed or reloaded before the job settles,
+      // reconcilePendingJobs() can resume polling it (or fail it cleanly)
+      // on the next boot instead of leaving a permanent busy spinner.
+      system.pendingStatusUrl = statusUrl;
+      this.saveConversations();
+    })
       .then(response => {
         const targetConversation = this.conversations.find(c => c.id === conversationId);
 
@@ -593,7 +601,8 @@ export class AichatComponent {
             ambiguous: response.ambiguous,
             loading: false,
             location: response.location,
-            reasoning: response.reasoning
+            reasoning: response.reasoning,
+            pendingStatusUrl: undefined
           });
 
           this.refreshRenderedMessages();
@@ -617,7 +626,8 @@ export class AichatComponent {
             text: 'An error occurred',
             sections: [{ type: 0, text: 'An error occurred' }],
             loading: false,
-            purpose: 'info'
+            purpose: 'info',
+            pendingStatusUrl: undefined
           };
 
           this.refreshRenderedMessages();
@@ -633,6 +643,96 @@ export class AichatComponent {
           this.saveConversations();
         }
       });
+  }
+
+  /**
+   * Runs once on startup, after conversations are loaded from localStorage.
+   *
+   * A conversation's "AI is thinking" placeholder message (`loading: true`)
+   * is persisted as part of the conversation, but the poll driving it lives
+   * only in memory -- so if the page was closed or reloaded while a
+   * chat/prompt job was in flight, that placeholder is loaded back with no
+   * request actually running behind it, and would otherwise sit there
+   * forever as a stuck busy spinner (loadConversations() resets the
+   * conversation-level `loading` flag, but not an individual message's).
+   *
+   * For each conversation left with such a message: if it has a
+   * `pendingStatusUrl`, resume polling that job -- this picks up right
+   * where things left off whether the job already finished while the page
+   * was away, is still running, or is no longer recognized by the server
+   * (e.g. it restarted), in which case it fails fast. If there's no
+   * `pendingStatusUrl` to check (an older message from before this was
+   * tracked, or one that never made it past being created), there's no way
+   * to ask the server about it, so it's failed closed instead of being
+   * left stuck.
+   */
+  private reconcilePendingJobs(): void {
+    let hadUnresolvableStuckMessage = false;
+
+    for (const conversation of this.conversations) {
+      const stuckMessage = conversation.messages.find(m => m.loading);
+
+      if (!stuckMessage) {
+        continue;
+      }
+
+      if (stuckMessage.pendingStatusUrl) {
+        this.resumePendingMessage(conversation, stuckMessage, stuckMessage.pendingStatusUrl);
+      } else {
+        conversation.loading = false;
+        this.failStuckMessage(conversation, stuckMessage);
+        hadUnresolvableStuckMessage = true;
+      }
+    }
+
+    if (hadUnresolvableStuckMessage) {
+      this.refreshRenderedMessages();
+      this.saveConversations();
+    }
+  }
+
+  private resumePendingMessage(conversation: ChatConversation, message: ChatMessage, statusUrl: string): void {
+    conversation.loading = true;
+    this.refreshRenderedMessages();
+
+    this.chatService.resumePrompt(statusUrl)
+      .then(response => {
+        const index = conversation.messages.findIndex(m => m.id === message.id);
+
+        if (index !== -1) {
+          conversation.messages[index] = parseText({ ...response, id: message.id });
+        }
+      })
+      .catch(error => {
+        // The job either explicitly failed, the server no longer
+        // recognizes it (most likely it restarted while this message was
+        // pending), or it didn't finish within the polling deadline -- in
+        // every case, stop waiting on it.
+        this.errorService.handleError(error);
+        this.failStuckMessage(conversation, message);
+      })
+      .finally(() => {
+        conversation.loading = false;
+        this.refreshRenderedMessages();
+        this.saveConversations();
+      });
+  }
+
+  private failStuckMessage(conversation: ChatConversation, message: ChatMessage): void {
+    const index = conversation.messages.findIndex(m => m.id === message.id);
+
+    if (index === -1) {
+      return;
+    }
+
+    conversation.messages[index] = {
+      ...message,
+      text: 'This request was interrupted and could not be completed. Please try again.',
+      sections: [{ type: 0, text: 'This request was interrupted and could not be completed. Please try again.' }],
+      loading: false,
+      purpose: 'info',
+      pendingStatusUrl: undefined
+    };
   }
 
   minimizeChat(): void {
