@@ -9,7 +9,8 @@ import org.springframework.stereotype.Service;
 @Service
 @ConditionalOnProperty(
     name = "data.usecase",
-    havingValue = "spn"
+    havingValue = "spn",
+    matchIfMissing = true
 )
 public class SpnChatPromptService extends ChatPromptService
 {
