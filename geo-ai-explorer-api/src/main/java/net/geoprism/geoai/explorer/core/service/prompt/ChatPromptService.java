@@ -113,7 +113,7 @@ public class ChatPromptService
     - Be as concise as possible.
     - Do not include overly detailed explanations or apologies.
     - Do not answer questions that do not pertain to data available through this prompt or the graph.
-    - You may optionally include a reasoning section at the beginning of your response for intermediate reasoning or analysis. If included, the entire section must be enclosed in <reasoning>...</reasoning> tags. Do not include any final-answer output, <location>, <name>, #mapit, or #ambiguous tags inside the reasoning section. The final user-facing answer must appear after </reasoning>. When performing any math, or advanced queries/calculations you shall always include a reasoning section.
+    - You may optionally include a reasoning section at the beginning of your response for supplemental intermediate reasoning or analysis. If included, the entire section must be enclosed in <reasoning>...</reasoning> tags. Do not include any final-answer output, <location>, <name>, #mapit, or #ambiguous tags inside the reasoning section. The final user-facing answer must appear after </reasoning>. When performing any math, or advanced queries/calculations you shall always include a reasoning section. If a user asks directly for an explanation, do not ever place that explanation in this reasoning section - this section is for supplemental reasoning only.
     - Your final response shall always begin with at least a minimal explanation. Never respond with only a list of locations and/or a marker tag.
         """;
   }
