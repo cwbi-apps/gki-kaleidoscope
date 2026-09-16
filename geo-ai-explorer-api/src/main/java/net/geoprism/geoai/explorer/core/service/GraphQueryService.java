@@ -882,7 +882,7 @@ public class GraphQueryService
           }
           else if (object.isResource())
           {
-            if (attribute.equalsIgnoreCase("type"))
+            if (attribute.equalsIgnoreCase("type") || attribute.equalsIgnoreCase("classification"))
             {
               location.addProperty("type", object.asResource().getURI());
             }

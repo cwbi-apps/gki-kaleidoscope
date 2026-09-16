@@ -21,12 +21,12 @@ public class AppProperties
 
   public String getSparqlGraph()
   {
-    return env.getProperty("sparql.graph2", "https://spn.geoprism.net/spn");
+    return env.getProperty("sparql.graph", "https://spn.geoprism.net/spn");
   }
   
   public String getLpgPrefix()
   {
-    return env.getProperty("sparql.objectPrefix2", "https://spn.geoprism.net#");
+    return env.getProperty("sparql.objectPrefix", "https://spn.geoprism.net#");
   }
   
   public String getChatAgentHarnessArn()
