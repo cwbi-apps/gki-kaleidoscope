@@ -48,7 +48,9 @@ public class SpnChatPromptService extends ChatPromptService
     Edges
     =
     
-    A list of relationships between types. The relationship format is described as (SourceType)->[EdgeType]->(TargetType) and is directional from left to right. If a relationship is bi-directional it will be listed twice, one in each direction.
+    The following is the full list of edges between the types in the system. If an edge is not explicitly listed here between two types, you must assume the data does not exist and the path cannot be used to resolve a query.
+    
+    The relationship format is described as (SourceType)->[EdgeType]->(TargetType) and is directional from left to right. If a relationship is bi-directional it will be listed twice, one in each direction.
 
     (obj:FloodScenario)->[obj:HasFloodRisk]->(obj:Road)
     (obj:FloodScenario)->[obj:HasFloodRisk]->(obj:LandParcel)
@@ -140,9 +142,13 @@ public class SpnChatPromptService extends ChatPromptService
         =
         Flood Inundation
         =
-        If the user asks 'Which objects are at flood risk', you ONLY need to consider these objects:
+        If the user asks 'Which objects are at flood risk', you should start with these relationships:
         
-        (obj:FloodScenario)->[obj:HasFloodRisk] -> ?object
+        (obj:FloodScenario) -> [obj:HasFloodRisk] -> ...
+        
+        Answering questions about flooded structures, for example, might require traversing multiple edges, i.e.
+        FloodScenario -> HasFloodRisk -> LandParcel
+        Structure -> LocatedIn -> LandParcel
         
         If the user asks about what Inundation scenarios are available, query obj:FloodScenario and return the results (along with #mapit).
               """;
