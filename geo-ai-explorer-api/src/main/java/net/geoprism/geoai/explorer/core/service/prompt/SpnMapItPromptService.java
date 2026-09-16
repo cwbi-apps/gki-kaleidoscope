@@ -137,9 +137,13 @@ public class SpnMapItPromptService extends MapItPromptService
         =
         Flood Inundation
         =
-        If the user asks 'Which objects are at flood risk', you ONLY need to consider these objects:
+        If the user asks 'Which objects are at flood risk', you should start with these relationships:
         
-        (obj:FloodScenario)->[obj:HasFloodRisk] -> ?object
+        (obj:FloodScenario) -> [obj:HasFloodRisk] -> ...
+        
+        Answering questions about flooded structures, for example, might require traversing multiple edges, i.e.
+        FloodScenario -> HasFloodRisk -> LandParcel
+        Structure -> LocatedIn -> LandParcel
         
         If the user asks about what Inundation scenarios are available, query obj:FloodScenario and return the results (along with #mapit).
               """;
