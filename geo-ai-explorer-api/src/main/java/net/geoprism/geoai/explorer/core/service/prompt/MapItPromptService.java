@@ -176,7 +176,7 @@ public class MapItPromptService
     PREFIX geo: <http://www.opengis.net/ont/geosparql#>
     PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     PREFIX sf: <http://www.opengis.net/ont/sf#>
-    PREFIX obj: <%1$s#>
+    PREFIX obj: <%1$s>
         """;
   }
 

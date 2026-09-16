@@ -1,0 +1,271 @@
+
+================
+1. Upload to s3
+s3://terraframe-public-files/USACE/inundation.trig.gz
+s3://terraframe-public-files/USACE/LDS-IDs-fixed-05-30-2024.nq.gz
+================
+
+export NEPTUNE_INSTANCE=xyz.neptune.amazonaws.com
+export RDF_DUMP=s3://bucket/filename.nq.gz
+export IAM_ROLE=arn:aws-us-region:iam::1234:role/role-name-xyz
+export REGION=us-region-1
+
+================
+2. Call Neptune Loader API. Execute these commands in JupyterLab terminal:
+================
+
+===a===
+curl -X POST "https://$NEPTUNE_INSTANCE:8182/loader" \
+  -H "Content-Type: application/json" \
+  -d @- <<EOF
+{
+  "source": "$RDF_DUMP",
+  "format": "nquads",
+  "iamRoleArn": "$IAM_ROLE",
+  "region": "$REGION",
+  "failOnError": "TRUE"
+}
+EOF
+  
+===a (sigv4)===
+RDF_DUMP="s3://terraframe-public-files/USACE/inundation-localhost.nq.gz"
+IAM_ROLE="arn:aws:iam::961902606948:role/neptune-allow-alll"
+REGION="us-west-2"
+
+curl --aws-sigv4 "aws:amz:$REGION:neptune-db" \
+  --user "$TF_BUILDER_KEY:$TF_BUILDER_SECRET" \
+  -X POST "https://$NEPTUNE_INSTANCE:8182/loader" \
+  -H "Content-Type: application/json" \
+  -d @- <<EOF
+{
+  "source": "$RDF_DUMP",
+  "format": "nquads",
+  "iamRoleArn": "$IAM_ROLE",
+  "region": "$REGION",
+  "failOnError": "TRUE"
+}
+EOF
+
+===b===
+curl -X POST "https://$NEPTUNE_INSTANCE:8182/loader" \
+  -H "Content-Type: application/json" \
+  -d @- <<EOF
+{
+  "source": "$RDF_DUMP",
+  "format": "nquads",
+  "iamRoleArn": "$IAM_ROLE",
+  "region": "$REGION",
+  "failOnError": "TRUE"
+}
+EOF
+
+================
+2b. Check Neptune Loader Status. Wait till 'Completed'
+================
+curl "https://$NEPTUNE_INSTANCE:8182/loader/YOUR_LOAD_ID_HERE"
+
+  
+================
+3. Build costing data. Execute these commands in JupyterLab terminal:
+================
+
+===a===
+curl -X POST \
+  https://$NEPTUNE_INSTANCE:8182/sparql \
+  -H "Content-Type: application/sparql-update" \
+  --data-binary @- <<'EOF'
+PREFIX cwbi: <http://dime.usace.mil/ontologies/cwbi-concept#>
+PREFIX lpgs: <https://localhost:4200/lpg/rdfs#>
+PREFIX lpg: <https://localhost:4200/lpg#>
+PREFIX lpgv: <https://localhost:4200/lpg/graph_801104/0#>
+PREFIX lpgvs: <https://localhost:4200/lpg/graph_801104/0/rdfs#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+INSERT {
+  GRAPH ?g1 {
+    ?rem_proj cwbi:ProjectCost ?cost .
+  }
+}
+WHERE {
+  GRAPH ?g1 {
+    ?rem_proj a cwbi:Remis_Project .
+  }
+
+  # random integer in [50,000, 150,000), mean ≈ 100,000
+  BIND(xsd:integer(50000 + FLOOR(RAND() * (150000 - 50000))) AS ?cost)
+}
+EOF
+
+
+===b===
+curl --http1.1 -X POST \
+"https://$NEPTUNE_INSTANCE:8182/sparql" \
+--data-urlencode "update=PREFIX cwbi: <http://dime.usace.mil/ontologies/cwbi-concept#>
+PREFIX lpgs: <https://localhost:4200/lpg/rdfs#>
+PREFIX lpg: <https://localhost:4200/lpg#>
+PREFIX lpgv: <https://localhost:4200/lpg/graph_801104/0#>
+PREFIX lpgvs: <https://localhost:4200/lpg/graph_801104/0/rdfs#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+INSERT {
+  GRAPH <https://localhost:4200/lpg/graph_801104/0#> {
+    ?proj cwbi:ProjectCost ?cost .
+  }
+}
+WHERE {
+  GRAPH <http://dime.usace.mil/data/dataset#REMIS_PROJECTS> {
+    ?rem_proj a cwbi:Remis_Project ;
+      skos:altLabel ?projCode ;
+      cwbi:ProjectCost ?cost .
+  }
+
+  GRAPH <https://localhost:4200/lpg/graph_801104/0#> {
+    ?proj a lpgvs:Project ;
+      lpgs:GeoObject-code ?projCode .
+  }
+}"
+
+
+===c===
+curl --http1.1 -X POST "https://$NEPTUNE_INSTANCE:8182/sparql" \
+--data-urlencode "update=PREFIX cwbi: <http://dime.usace.mil/ontologies/cwbi-concept#>
+PREFIX lpgs: <https://localhost:4200/lpg/rdfs#>
+PREFIX lpg: <https://localhost:4200/lpg#>
+PREFIX lpgv: <https://localhost:4200/lpg/graph_801104/0#>
+PREFIX lpgvs: <https://localhost:4200/lpg/graph_801104/0/rdfs#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+INSERT {
+  GRAPH <https://localhost:4200/lpg/graph_801104/0#> {
+    ?proj cwbi:ProjectCost ?cost .
+  }
+}
+WHERE {
+  GRAPH <http://dime.usace.mil/data/dataset#REMIS_PROJECTS> {
+    ?rem_proj a cwbi:Remis_Project ;
+      skos:altLabel ?projCode ;
+      cwbi:ProjectCost ?cost .
+  }
+
+  GRAPH <https://localhost:4200/lpg/graph_801104/0#> {
+    ?proj a lpgvs:Project ;
+      lpgs:GeoObject-code ?projCode .
+  }
+}"
+
+
+===d===
+curl --http1.1 -X POST "https://$NEPTUNE_INSTANCE:8182/sparql" \
+--data-urlencode "update=PREFIX cwbi: <http://dime.usace.mil/ontologies/cwbi-concept#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+INSERT {
+  GRAPH ?g1 {
+    ?program cwbi:ProgramBudget ?budget .
+  }
+}
+WHERE {
+  {
+    SELECT ?g1 ?program (SUM(xsd:decimal(?cost)) AS ?totalCost)
+    WHERE {
+      GRAPH ?g1 {
+        ?rem_proj a cwbi:Remis_Project ;
+                  cwbi:Program ?program ;
+                  cwbi:ProjectCost ?cost .
+      }
+    }
+    GROUP BY ?g1 ?program
+  }
+
+  # percent in [-0.10 .. +0.10]
+  BIND( ((RAND()*2.0) - 1.0) * 0.10 AS ?pct )
+
+  # decimal math throughout; round to integer (or cents, see notes)
+  BIND( xsd:decimal(?totalCost) * (1.0 + ?pct) AS ?rawBudget )
+  BIND( xsd:integer(ROUND(?rawBudget)) AS ?budget )
+}"
+
+
+
+====================
+4. Test with this query:
+====================
+
+PREFIX cwbi: <http://dime.usace.mil/ontologies/cwbi-concept#>
+PREFIX lpgs: <https://localhost:4200/lpg/rdfs#>
+PREFIX lpg: <https://localhost:4200/lpg#>
+PREFIX lpgv: <https://localhost:4200/lpg/graph_801104/0#>
+PREFIX lpgvs: <https://localhost:4200/lpg/graph_801104/0/rdfs#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT DISTINCT ?program ?lbl ?rem_proj ?cost
+WHERE {
+  BIND("000510" AS ?code)
+
+  GRAPH <http://dime.usace.mil/data/dataset#REMIS_PROJECTS> {
+    ?program a cwbi:Program ;
+             skos:altLabel ?code .
+    ?rem_proj a cwbi:Remis_Project ;
+              cwbi:Program ?program ;
+              skos:altLabel ?lbl ;
+    		  cwbi:ProjectCost ?cost.
+  }
+}
+LIMIT 100
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+================
+== Scratchpad ==
+================
+
+== List the named graphs and tell me how much data is in each ==
+curl -s -X POST \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'query=SELECT ?graph (COUNT(*) AS ?count) WHERE { GRAPH ?graph { ?s ?p ?o } } GROUP BY ?graph ORDER BY DESC(?count)' \
+  "https://$NEPTUNE_INSTANCE:8182/sparql"
+
+
+
+
+
+Signed url import with neptune
+
+curl -X POST https://usace-testing-1.cfucqziwa6r0.us-west-2.neptune.amazonaws.com:8182/sparql \
+  -H "Content-Type: application/sparql-update" \
+  --data 'LOAD <https://terraframe-public-files.s3.us-west-2.amazonaws.com/USACE/inundation.trig.gz>'
+
+  
+  
+curl https://usace-testing-1.cfucqziwa6r0.us-west-2.neptune.amazonaws.com:8182/sparql \
+  --data-urlencode 'update=LOAD <https://terraframe-public-files.s3.us-west-2.amazonaws.com/USACE/inundation.trig.gz>'
+  
+  
+  
+  
+=== Convert trig to nquads ===
+sudo docker run --rm \
+  -v $(pwd):/data \
+  -w /data \
+  stain/jena \
+  riot --syntax=trig --output=nquads inundation.trig > output.nq
+  
+  
+  
+  
+  
+  

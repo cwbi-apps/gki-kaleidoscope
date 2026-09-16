@@ -1,0 +1,47 @@
+
+export NEPTUNE_INSTANCE=xyz.neptune.amazonaws.com
+export RDF_DUMP=s3://bucket/filename.nq.gz
+export IAM_ROLE=arn:aws-us-region:iam::1234:role/role-name-xyz
+export REGION=us-region-1
+
+#### Wipe the database in batches (a full wipe will timeout) ####
+
+BATCH_SIZE=100000
+
+while true; do
+
+  EXISTS=$(curl -fsS -G \
+    -H 'Accept: application/sparql-results+json' \
+    --data-urlencode 'query=ASK { GRAPH ?g { ?s ?p ?o } }' \
+    "https://$NEPTUNE_INSTANCE:8182/sparql")
+
+  if echo "$EXISTS" | grep -q '"boolean"[[:space:]]*:[[:space:]]*false'; then
+    echo "Neptune is empty."
+    break
+  fi
+
+  echo "Deleting another $BATCH_SIZE quads..."
+
+  curl -fsS -X POST \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    --data-urlencode "update=
+DELETE {
+  GRAPH ?g {
+    ?s ?p ?o
+  }
+}
+WHERE {
+  {
+    SELECT ?g ?s ?p ?o
+    WHERE {
+      GRAPH ?g {
+        ?s ?p ?o
+      }
+    }
+    LIMIT $BATCH_SIZE
+  }
+}" \
+    "https://$NEPTUNE_INSTANCE:8182/sparql"
+
+done
+
