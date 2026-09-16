@@ -48,7 +48,9 @@ public class SpnMapItPromptService extends MapItPromptService
     Edges
     =
     
-    A list of relationships between types. The relationship format is described as (SourceType)->[EdgeType]->(TargetType) and is directional from left to right. If a relationship is bi-directional it will be listed twice, one in each direction.
+    The following is the full list of edges between the types in the system. If an edge is not explicitly listed here between two types, you must assume the data does not exist and the path cannot be used to resolve a query.
+    
+    The relationship format is described as (SourceType)->[EdgeType]->(TargetType) and is directional from left to right. If a relationship is bi-directional it will be listed twice, one in each direction.
     
     
     (cwbi:Remis_Project)->[cwbi:Program]->(cwbi:Program)
