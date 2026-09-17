@@ -1,12 +1,5 @@
 import { GeoObject } from "./geoobject.model";
 
-export interface MessageSection {
-  text: string;
-  type: number;
-  uri?: string;
-}
-
-
 export interface ChatMessage {
   id: string
   sender: 'user' | 'system';
@@ -14,7 +7,7 @@ export interface ChatMessage {
   mappable: boolean;
   ambiguous?: boolean;
   location?: string;
-  sections?: MessageSection[];
+  parsedText?: string;
   loading?: boolean;
   purpose: 'info' | 'standard'
   /**

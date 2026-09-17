@@ -45,3 +45,15 @@ WHERE {
 
 done
 
+
+#### Query to find out how much data is in Neptune ####
+
+curl -s -X POST \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'query=SELECT ?graph (COUNT(*) AS ?count) WHERE { GRAPH ?graph { ?s ?p ?o } } GROUP BY ?graph ORDER BY DESC(?count)' \
+  "https://$NEPTUNE_INSTANCE:8182/sparql"
+
+
+#### Query to find out how much data is in OpenSearch ####
+
+??? Requires IAM auth ???

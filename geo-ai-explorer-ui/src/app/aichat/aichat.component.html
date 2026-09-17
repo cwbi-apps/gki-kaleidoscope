@@ -211,36 +211,7 @@
                 <span>Reasoning</span>
               </div>
 
-              <ng-container *ngIf="msg.hasLocationSections; else markdownMessage">
-                <span class="location-content">
-                  <ng-container *ngFor="let section of msg.renderedSections">
-                    <span *ngIf="section.type === 0">{{ section.renderedText }}</span>
-                    <a
-                      *ngIf="section.type === 1"
-                      class="clickable"
-                      (click)="select($event, section.uri!)">
-                      {{ section.text }}
-                    </a>
-                  </ng-container>
-                </span>
-              </ng-container>
-
-              <ng-template #markdownMessage>
-                <ng-container *ngFor="let section of msg.renderedSections">
-                  <span
-                    *ngIf="section.type === 0"
-                    class="markdown-content"
-                    [innerHTML]="section.renderedHtml ?? section.renderedText">
-                  </span>
-
-                  <a
-                    *ngIf="section.type === 1"
-                    class="clickable"
-                    (click)="select($event, section.uri!)">
-                    {{ section.text }}
-                  </a>
-                </ng-container>
-              </ng-template>
+              <span class="markdown-content" [innerHTML]="msg.renderedHtml"></span>
 
               <div class="action mappable-actions" *ngIf="msg.mappable">
                 <p-button (onClick)="mapIt(msg)">

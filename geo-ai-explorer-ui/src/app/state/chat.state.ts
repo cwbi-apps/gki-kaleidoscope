@@ -39,36 +39,23 @@ The dataset contains interconnected information about:
 Key relationships include flood risk assessment, water flow patterns, and population impact analysis, all connected through a robust spatial data structure.
 `;
 
+// The AI response may include references to locations. We want to render those as actual clickable links which, when clicked, allow the user to inspect the object
 export function parseText(m: ChatMessage): ChatMessage {
 
     const message = { ...m }
-    message.sections = [];
 
-    const tokens = message.text.split('<location>')
+    const locationPattern = /<location><label>([\s\S]*?)<\/label><uri>([\s\S]*?)<\/uri><\/location>/g;
 
-    tokens.forEach(token => {
+    // Render as a markdown list whenever the response contains more than one
+    // location link, so consecutive links don't run together on the same
+    // line (they render fine inline when there's only a single link).
+    const locationCount = [...message.text.matchAll(locationPattern)].length;
+    const asList = locationCount > 1;
 
-        const pattern = /<label>([\s\S]*?)<\/label><uri>([\s\S]*?)<\/uri><\/location>([\s\S]*)/
-
-        if (pattern.test(token)) {
-            const values = pattern.exec(token);
-            const label: string = values?.at(1) as string;
-            const uri: string = values?.at(2) as string;
-            const post: string = values?.at(3) as string;
-
-            if (uri.startsWith(environment.basePrefix)) {
-                message.sections?.push({ type: 1, text: label, uri: uri })
-            }
-            else {
-                message.sections?.push({ type: 0, text: label, uri: uri })
-            }
-
-            message.sections?.push({ type: 0, text: post })
-        }
-        else {
-            message.sections?.push({ type: 0, text: token })
-        }
-    })
+    message.parsedText = message.text.replace(locationPattern, (_all, label: string, uri: string) => {
+        const link = "[" + label + "](#/internalLocationInspect/" + encodeURIComponent(uri) + ")";
+        return asList ? "\n- " + link : link;
+    });
 
     return message;
 }
