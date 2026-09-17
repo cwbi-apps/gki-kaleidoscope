@@ -168,6 +168,32 @@ public class ChatPromptService
   {
     return "";
   }
+  
+  protected String dataSource()
+  {
+    return """
+    =
+    DataSource
+    =
+    
+    All instances of the listed types will contain origin DataSource information. DataSource contains the following attributes:
+    rdfs:label (literal)
+    DataSource-authority - A URI reference to the SourceAuthority object in this database
+    DataSource-metadataProfile - (literal) Format of the source metadata file (i.e. STAC, DCAT, FHIR)
+    DataSource-governanceLevel - (literal) (i.e. Authoritative, Experimental, Community Curated)
+    DataSource-uri - A URI to an external origin data source (not in this database, i.e. on the internet)
+    DataSource-description (literal)
+    DataSource-code (literal)
+    
+    DataSources contain references to a SourceAuthority. SourceAuthorities define these attributes:
+    rdfs:label (literal)
+    SourceAuthority-authorityType - (literal) (i.e. Government Agency, NGO, Private Sector)
+    SourceAuthority-description (literal)
+    SourceAuthority-code (literal)
+    
+    A SourceAuthority is an organization which is responsible for managing various data sources. The DataSource can be thought of as a singular (file) or dump of data coming from a SourceAuthority.
+    """;
+  }
 
   /** Dataset-specific directed relationship declarations. */
   protected String edges()
