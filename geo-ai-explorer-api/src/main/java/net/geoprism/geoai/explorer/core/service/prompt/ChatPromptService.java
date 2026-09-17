@@ -192,6 +192,7 @@ public class ChatPromptService
     SourceAuthority-code (literal)
     
     A SourceAuthority is an organization which is responsible for managing various data sources. The DataSource can be thought of as a singular (file) or dump of data coming from a SourceAuthority.
+    These objects are NOT locations. Do not wrap them in location tags when referencing in chat.
     """;
   }
 
