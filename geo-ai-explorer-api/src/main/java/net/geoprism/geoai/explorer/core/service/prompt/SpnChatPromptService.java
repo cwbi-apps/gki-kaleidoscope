@@ -15,6 +15,22 @@ import org.springframework.stereotype.Service;
 public class SpnChatPromptService extends ChatPromptService
 {
   @Override
+  protected String build()
+  {
+    return joinComponents(
+        instructions(),
+        schema(),
+        prefixes(),
+        graphs(),
+        types(),
+        edges(),
+        attributes(),
+        dataSource(),
+        schemaAddendum(),
+        sparqlExamples());
+  }
+  
+  @Override
   protected String types()
   {
     return """
@@ -104,6 +120,7 @@ public class SpnChatPromptService extends ChatPromptService
     rdfs:label - A string literal, defines the label of the GeoObject
     obj:GeoObject-code - A string literal, defines the code of the GeoObject. Code is the uniqueness constraint for this dataset.
     obj:GeoObject-uid - A generated, unique UUID for the object. Should not be shown to the end user as it does not contain much significance. Use code instead.
+    obj:GeoObject-dataSource - A uri reference to the object's origin DataSource. May be used in combination with DataSource and SourceAuthority joins to show provenance information.
     
     
     The following types contain domain specific attribution, where the type is listed first and an iri for the predicate which links to the literal is listed second, and then a description of the attribute is listed third.
