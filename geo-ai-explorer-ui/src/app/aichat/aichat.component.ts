@@ -23,7 +23,7 @@ import {
 
 import { ChatService } from '../service/chat-service.service';
 import { initialState, parseText } from '../state/chat.state';
-import { ChatMessage, MessageSection } from '../models/chat.model';
+import { ChatMessage } from '../models/chat.model';
 import { ErrorService } from '../service/error-service.service';
 import {
   ExplorerActions,
@@ -50,14 +50,8 @@ interface ChatConversation {
   createdAt: number;
 }
 
-interface RenderedMessageSection extends MessageSection {
-  renderedText: string;
-  renderedHtml?: string;
-}
-
 interface RenderedChatMessage extends ChatMessage {
-  hasLocationSections: boolean;
-  renderedSections: RenderedMessageSection[];
+  renderedHtml: string;
   savedQueryIndex: number | null;
 }
 
@@ -124,6 +118,20 @@ export class AichatComponent {
   private markdownCache = new Map<string, string>();
   private savedQueryIndexById = new Map<string, number>();
 
+  /**
+   * Matches the `#/internalLocationInspect/<uri>` links that parseText()
+   * (chat.state.ts) generates for <location> tags in a chat response. Those
+   * links are rendered through [innerHTML] (see
+   * buildRenderedMessage/renderMarkdown), so Angular never compiles them and
+   * a (click) binding on them would never fire -- the browser just treats
+   * them as plain same-page anchor links. Instead we listen for the hash
+   * they leave behind and react to that. The name is deliberately not
+   * "explorer" or anything else that might collide with a real route added
+   * to app.routes.ts down the line -- this hash is never meant to be routed,
+   * only intercepted here and cleared.
+   */
+  private static readonly LOCATION_HASH_PATTERN = /^#\/internalLocationInspect\/(.+)$/;
+
   @ViewChild('chatContainer') chatContainer?: ElementRef<HTMLElement>;
   @ViewChild('messageInput') messageInput?: ElementRef<HTMLTextAreaElement>;
 
@@ -162,11 +170,36 @@ export class AichatComponent {
 
       this.minimized = step === WorkflowStep.MinimizeChat;
     });
+
+    // Handle the case where a location link's hash is already on the URL
+    // when this component is (re)constructed, e.g. a hard refresh.
+    this.handleLocationHashNavigation();
   }
 
   ngOnDestroy(): void {
     this.onWorkflowStepChange.unsubscribe();
     this.onSavedQueriesChange.unsubscribe();
+  }
+
+  @HostListener('window:hashchange')
+  onLocationHashChange(): void {
+    this.handleLocationHashNavigation();
+  }
+
+  private handleLocationHashNavigation(): void {
+    const match = AichatComponent.LOCATION_HASH_PATTERN.exec(window.location.hash);
+
+    if (!match) {
+      return;
+    }
+
+    // Clear the hash right away: it's not a real route (app.routes.ts has no
+    // "/internalLocationInspect/:uri" path), it's only ever meant to carry
+    // this one click, and leaving it in place would stop a second click on
+    // the same link from ever firing another hashchange event.
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+
+    this.inspectLocationUri(decodeURIComponent(match[1]));
   }
 
   startSidebarResize(event: MouseEvent): void {
@@ -320,10 +353,6 @@ export class AichatComponent {
     return rendered;
   }
 
-  private renderLocationText(text: string | undefined | null): string {
-    return (text ?? '').replace(/(^|\n)[ \t]+(?=-\s)/g, '$1');
-  }
-
   private refreshRenderedMessages(): void {
     const conversation = this.activeConversation;
 
@@ -333,21 +362,14 @@ export class AichatComponent {
   }
 
   private buildRenderedMessage(conversation: ChatConversation, message: ChatMessage): RenderedChatMessage {
-    const sections = message.sections ?? [];
-    const hasLocationSections = sections.some(section => section.type === 1);
+    // parsedText (see chat.model.ts) is only set by parseText() (chat.state.ts);
+    // messages that skip it -- the user's own text, or a loading/error
+    // placeholder -- fall back to the raw text.
+    const parsedText = message.parsedText ?? message.text ?? '';
 
     return {
       ...message,
-      hasLocationSections,
-      renderedSections: sections.map(section => ({
-        ...section,
-        renderedText: hasLocationSections && section.type === 0
-          ? this.renderLocationText(section.text)
-          : section.text,
-        renderedHtml: !hasLocationSections && message.sender === 'system' && section.type === 0
-          ? this.renderMarkdown(section.text)
-          : undefined
-      })),
+      renderedHtml: message.sender === 'system' ? this.renderMarkdown(parsedText) : parsedText,
       savedQueryIndex: message.mappable
         ? this.getSavedQueryIndexForConversation(conversation, message)
         : null
@@ -518,14 +540,6 @@ export class AichatComponent {
       : trimmed;
   }
 
-  private normalizeResponseSections(response: any): any[] {
-    if (Array.isArray(response.sections)) {
-      return response.sections;
-    }
-
-    return [{ type: 0, text: response.text ?? '' }];
-  }
-
   sendMessage(): void {
     const conversation = this.activeConversation;
 
@@ -544,7 +558,6 @@ export class AichatComponent {
       sender: 'user',
       text,
       mappable: false,
-      sections: [{ type: 0, text }],
       loading: false,
       purpose: 'standard'
     };
@@ -559,7 +572,6 @@ export class AichatComponent {
       sender: 'system',
       text: '',
       mappable: false,
-      sections: [],
       loading: true,
       purpose: 'standard'
     };
@@ -596,7 +608,6 @@ export class AichatComponent {
           targetConversation.messages[index] = parseText({
             ...system,
             text: response.text,
-            sections: this.normalizeResponseSections(response),
             mappable: response.mappable,
             ambiguous: response.ambiguous,
             loading: false,
@@ -624,7 +635,6 @@ export class AichatComponent {
           targetConversation.messages[index] = {
             ...system,
             text: 'An error occurred',
-            sections: [{ type: 0, text: 'An error occurred' }],
             loading: false,
             purpose: 'info',
             pendingStatusUrl: undefined
@@ -728,7 +738,6 @@ export class AichatComponent {
     conversation.messages[index] = {
       ...message,
       text: 'This request was interrupted and could not be completed. Please try again.',
-      sections: [{ type: 0, text: 'This request was interrupted and could not be completed. Please try again.' }],
       loading: false,
       purpose: 'info',
       pendingStatusUrl: undefined
@@ -1121,8 +1130,7 @@ export class AichatComponent {
     });
   }
 
-  select(event: Event, uri: string): void {
-    event.stopPropagation();
+  private inspectLocationUri(uri: string): void {
     this.mapLoading = true;
 
     this.explorerService.getAttributes(uri, true)
