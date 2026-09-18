@@ -151,10 +151,8 @@ public class SpnChatPromptService extends ChatPromptService
         =
         There are only two flood scenarios in the database:
         
-        A flood scenario with the label 'No Mitigation Scenario' and a code of '1'.
-        A flood scenario with the label 'Combo Plan Scenario' and a code of '2'
-        
-        If needed base on the chat history use these code when generating the SPARQL.
+        <https://spn.geoprism.net#FloodScenario-1> label'No Mitigation Scenario', code'1'
+        <https://spn.geoprism.net#FloodScenario-2> label'Combo Plan Scenario', 'code'2'
         
         =
         Flood Inundation

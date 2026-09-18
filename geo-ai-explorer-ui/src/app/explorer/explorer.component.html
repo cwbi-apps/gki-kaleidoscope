@@ -115,7 +115,7 @@
       >
         <fa-icon [icon]="backIcon"></fa-icon>
         <label>
-          {{ (previousWorkflowStep$ | async) === WorkflowStep.DisambiguateObject ? 'Back to results' : 'Back to chat response map' }}
+          {{ getBackButtonLabel(previousWorkflowStep$ | async) }}
         </label>
       </p-button>
 

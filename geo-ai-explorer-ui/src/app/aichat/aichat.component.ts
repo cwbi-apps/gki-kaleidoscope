@@ -361,6 +361,18 @@ export class AichatComponent {
       : [];
   }
 
+  // buildRenderedMessage() spreads each message into a brand-new object every time
+  // refreshRenderedMessages() runs (which happens on nearly every chat interaction),
+  // so without trackBy, *ngFor's default identity-based diffing sees every message as
+  // removed-and-re-added and tears down/rebuilds the whole list. On the reversed
+  // (column-reverse) message list that we rely on to stay pinned to the newest
+  // message with no manual scrolling, that full rebuild is what makes the view
+  // intermittently land back at the oldest message (the top) instead of staying on
+  // the newest one (the bottom) after sending a message.
+  trackByMessageId(_index: number, msg: RenderedChatMessage): string {
+    return msg.id;
+  }
+
   private buildRenderedMessage(conversation: ChatConversation, message: ChatMessage): RenderedChatMessage {
     // parsedText (see chat.model.ts) is only set by parseText() (chat.state.ts);
     // messages that skip it -- the user's own text, or a loading/error

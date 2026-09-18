@@ -971,6 +971,23 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         this.graphPanelOpen = false;
     }
 
+    // The workflow history is empty when the inspector was opened directly (e.g. a
+    // shared/reloaded link straight to an object, with no chat query behind it), so
+    // there is no "chat response map" state to return to.
+    public getBackButtonLabel(previousStep: WorkflowStep | null | undefined): string {
+        if (previousStep === WorkflowStep.DisambiguateObject) {
+            return 'Back to results';
+        }
+
+        // previousStep is null before the async pipe's first emission and undefined
+        // once the selector resolves to "no history" -- both mean the same thing here.
+        if (previousStep == null) {
+            return 'Back to chat';
+        }
+
+        return 'Back to chat response map';
+    }
+
     onMapBack() {
         if (this.workflowStep === WorkflowStep.DisambiguateObject) {
             this.cancelDisambiguation();
@@ -979,6 +996,12 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             this.previousWorkflowStep$.pipe(take(1)).subscribe(previousStep => {
                 if (previousStep === WorkflowStep.DisambiguateObject) {
                     this.goBack();
+                }
+                else if (previousStep === undefined) {
+                    // No workflow history: we were dropped directly into the inspector,
+                    // so there's no map/results state behind it. Go straight to chat.
+                    this.resetInspectorPanelState();
+                    this.store.dispatch(ExplorerActions.setWorkflowStep({ step: WorkflowStep.FullScreenChat }));
                 }
                 else {
                     this.resetInspectorPanelState();
