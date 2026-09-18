@@ -81,10 +81,6 @@ public class ChatPromptService
     - SPARQL name resolution tool: Can be used to perform a full text lookup to fetch the code, uri and type of an object based on its name. If this tool is invoked and its response starts with "No results found" then tell the user an object could not be found and STOP. If there is more than a single object, provide a list of the top objects (max of 5) and ask the user which is correct, ending your message with a #ambiguous tag.
     - SPARQL query tool: Allows you to directly execute SPARQL queries against an RDF graph. The schema and data dictionary of this graph will be provided later in this prompt.
 
-    In your response, when referencing graph objects, inform the downstream system of the object's label and uri using the following XML syntax:
-    <location><label>HUMAN LABEL</label><uri>URI</uri></location>
-    (NEVER list more than ten)
-
     Additionally, you may end your response with any of the following tags:
     - #ambiguous: When resolving a name to a concrete uri, if you discover many objects which may match the user's criteria, begin your response by informing the user that there are many locations which match their criteria, and then ALWAYS include 'name' AND <name>?name</name> to identify the name of the ambiguous object and then list the (max of 5) possible objects (using the XML tags described above) and finally end your message with the #ambiguous tag. Our front-end will detect this tag and ask the user to clarify which object they want.
     - #mapit: Indicates to the front-end UI that your textual response references a result set which can be mapped. Do not use this for a single object (use the object xml tags instead). End your response with this tag if the SPARQL query tool was used when generating your response.
@@ -109,12 +105,18 @@ public class ChatPromptService
     3. Query the configured graph to service the request.
     4. Write the response using the required XML tags where necessary. If the response references a mappable result set rather than a singular object, end with #mapit.
 
+    ALWAYS link your location references:
+    You will be given a concrete list of types. The instance data for these types are called Geo-Objects or locations. If your response mentions or otherwise references a specific location (this includes listing the object's code or label, even in a table), you must always wrap that mention in a markdown-formatted link where the link target is the full URI of the location (no prefixes). Do not link to objects which are not locations.
+
     Rules for your final response:
     - Be as concise as possible.
+    - You may format your response with markdown.
     - Do not include overly detailed explanations or apologies.
     - Do not answer questions that do not pertain to data available through this prompt or the graph.
-    - You may optionally include a reasoning section at the beginning of your response for supplemental intermediate reasoning or analysis. If included, the entire section must be enclosed in <reasoning>...</reasoning> tags. Do not include any final-answer output, <location>, <name>, #mapit, or #ambiguous tags inside the reasoning section. The final user-facing answer must appear after </reasoning>. When performing any math, or advanced queries/calculations you shall always include a reasoning section. If a user asks directly for an explanation, do not ever place that explanation in this reasoning section - this section is for supplemental reasoning only.
+    - You may optionally include a reasoning section at the beginning of your response for supplemental intermediate reasoning or analysis. If included, the entire section must be enclosed in <reasoning>...</reasoning> tags. Do not include any final-answer output, <location>, <name>, #mapit, or #ambiguous tags inside the reasoning section. The final user-facing answer must appear after </reasoning>. When performing any math, or advanced queries/calculations you shall always include a reasoning section. If a user asks directly for an explanation, do not ever place that explanation in this reasoning section - this section is for supplemental reasoning only. Do not ever include reasoning logic outside of these tags.
     - Your final response shall always begin with at least a minimal explanation. Never respond with only a list of locations and/or a marker tag.
+    - ALWAYS double check your final response to make sure that all locations mentioned have proper markdown links. Remember this includes a label, code, or any other reference.
+    - Never respond with a SPARQL query.
         """;
   }
 
@@ -233,7 +235,19 @@ public class ChatPromptService
     List<String> examples = new ArrayList<String>();
     
     examples.add(SharedPrompt.aggregationFunctions());
+    examples.add(locationReference());
     
     return examples;
+  }
+  
+  protected String locationReference()
+  {
+    return """
+            
+            Q: How many people would be affected by a flood if the combo plan was in place?
+            A: The total daytime population that would be affected by a flood under the Combo Plan (scenario code 2) is 123 people.
+            
+            WRONG! You referenced a combo plan (a location!) but you did not include a markdown link to its URI! 
+            """;
   }
 }

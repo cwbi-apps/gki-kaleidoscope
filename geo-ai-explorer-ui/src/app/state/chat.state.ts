@@ -39,23 +39,28 @@ The dataset contains interconnected information about:
 Key relationships include flood risk assessment, water flow patterns, and population impact analysis, all connected through a robust spatial data structure.
 `;
 
-// The AI response may include references to locations. We want to render those as actual clickable links which, when clicked, allow the user to inspect the object
 export function parseText(m: ChatMessage): ChatMessage {
+    const message = { ...m };
 
-    const message = { ...m }
+    // Standard markdown links: [Label](https://example.com)
+    const markdownLinkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
 
-    const locationPattern = /<location><label>([\s\S]*?)<\/label><uri>([\s\S]*?)<\/uri><\/location>/g;
+    // Markdown autolinks: <https://example.com>
+    const autolinkPattern = /<(https?:\/\/[^>]+)>/g;
 
-    // Render as a markdown list whenever the response contains more than one
-    // location link, so consecutive links don't run together on the same
-    // line (they render fine inline when there's only a single link).
-    const locationCount = [...message.text.matchAll(locationPattern)].length;
-    const asList = locationCount > 1;
-
-    message.parsedText = message.text.replace(locationPattern, (_all, label: string, uri: string) => {
-        const link = "[" + label + "](#/internalLocationInspect/" + encodeURIComponent(uri) + ")";
-        return asList ? "\n- " + link : link;
-    });
+    message.parsedText = message.text
+        .replace(
+            markdownLinkPattern,
+            (_all, label: string, uri: string) => {
+                return `[${label}](#/internalLocationInspect/${encodeURIComponent(uri)})`;
+            }
+        )
+        .replace(
+            autolinkPattern,
+            (_all, uri: string) => {
+                return `[${uri}](#/internalLocationInspect/${encodeURIComponent(uri)})`;
+            }
+        );
 
     return message;
 }
@@ -75,13 +80,15 @@ export interface ChatStateModel {
     messages: ChatMessage[];
 }
 
-export const initialState: ChatStateModel = {
-    messages: [parseText({ id: '1', sender: 'system', text: initialMessage, mappable: false, ambiguous: false, purpose: 'info' })],
-    sessionId: uuidv4()
-}
+export const initialState: ChatStateModel = {messages: [], sessionId: uuidv4()};
+// export const initialState: ChatStateModel = {
+//     messages: [parseText({ id: '1', sender: 'system', text: initialMessage, mappable: false, ambiguous: false, purpose: 'info' })],
+//     sessionId: uuidv4()
+// }
 
 // if (environment.mockRequests)
-initialState.messages = MockUtil.messages.map(m => parseText(m));
+// initialState.messages = MockUtil.messages.map(m => parseText(m));
+// initialState.messages = [];
 
 
 export const chatReducer = createReducer(
