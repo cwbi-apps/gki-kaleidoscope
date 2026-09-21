@@ -5,9 +5,10 @@
 }
 
 .theme-toggle {
+  /* Only shown on the chat-only views (full-screen chat / chat + results) - top-right */
   position: fixed;
+  top: 1rem;
   right: 1rem;
-  bottom: 1rem;
   z-index: 10000;
   display: inline-grid;
   place-items: center;
