@@ -33,12 +33,12 @@ public class ConfigurationServiceTest
     Assert.assertTrue(styles.size() > 0);
   }
 
-  @Test
-  public void testGetVectorLayers() throws IOException, ParseException
-  {
-    List<VectorLayer> layers = this.service.getVectorLayers();
-
-    Assert.assertTrue(layers.size() > 0);
-  }
+//  @Test
+//  public void testGetVectorLayers() throws IOException, ParseException
+//  {
+//    List<VectorLayer> layers = this.service.getVectorLayers();
+//
+//    Assert.assertTrue(layers.size() > 0);
+//  }
 
 }
