@@ -432,26 +432,30 @@
 
     <hr class="legend-divider">
 
-    <h4>Context Layers</h4>
+    <ng-container *ngIf="vectorLayers$ | async as vectorLayers">
+      <ng-container *ngIf="vectorLayers.length > 0">
+        <h4>Context Layers</h4>
 
-    <div>
-      <div class="legend-item horizontal-layout"
-           *ngFor="let layer of vectorLayers$ | async">
+        <div>
+          <div class="legend-item horizontal-layout"
+              *ngFor="let layer of vectorLayers">
 
-        <p-checkbox binary="true"
-                    [ngModel]="layer.enabled"
-                    [inputId]="layer.id"
-                    (onChange)="toggleVectorLayer(layer)" />
+            <p-checkbox binary="true"
+                        [ngModel]="layer.enabled"
+                        [inputId]="layer.id"
+                        (onChange)="toggleVectorLayer(layer)" />
 
-        <div class="square"
-             [ngStyle]="{ background: layer.color }">
+            <div class="square"
+                [ngStyle]="{ background: layer.color }">
+            </div>
+
+            <label [for]="layer.id" class="ml-2">
+              {{ layer.label }}
+            </label>
+          </div>
         </div>
-
-        <label [for]="layer.id" class="ml-2">
-          {{ layer.label }}
-        </label>
-      </div>
-    </div>
+      </ng-container>
+    </ng-container>
     </p-panel>
   </ng-template>
 </div>
