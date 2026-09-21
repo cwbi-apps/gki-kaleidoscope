@@ -1,7 +1,11 @@
 import { NgIf } from '@angular/common';
-import { Component, OnDestroy } from '@angular/core';
+import { Component, inject, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
+import { Store } from '@ngrx/store';
+import { Subscription } from 'rxjs';
+
+import { getWorkflowStep, WorkflowStep } from './state/explorer.state';
 
 @Component({
     selector: 'app-root',
@@ -10,6 +14,7 @@ import { TooltipModule } from 'primeng/tooltip';
     styleUrl: './app.component.scss'
 })
 export class AppComponent implements OnDestroy {
+    private readonly store = inject(Store);
     private readonly storageKey = 'geo-ai-explorer-theme';
     private readonly systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
     private readonly onSystemThemeChange = (event: MediaQueryListEvent): void => {
@@ -17,13 +22,22 @@ export class AppComponent implements OnDestroy {
             this.setDarkMode(event.matches);
         }
     };
+    private readonly onWorkflowStepChange: Subscription;
 
     isDarkMode = document.documentElement.classList.contains('app-dark');
+
+    // The theme toggle is only shown on the chat-only views (full-screen chat
+    // / chat + results). It's hidden everywhere the map is visible.
+    isChatOnlyView = true;
 
     constructor() {
         const savedTheme = localStorage.getItem(this.storageKey);
         this.setDarkMode(savedTheme ? savedTheme === 'dark' : this.systemTheme.matches);
         this.systemTheme.addEventListener('change', this.onSystemThemeChange);
+
+        this.onWorkflowStepChange = this.store.select(getWorkflowStep).subscribe(step => {
+            this.isChatOnlyView = step === WorkflowStep.FullScreenChat || step === WorkflowStep.AiChatAndResults;
+        });
     }
 
     toggleTheme(): void {
@@ -33,6 +47,7 @@ export class AppComponent implements OnDestroy {
 
     ngOnDestroy(): void {
         this.systemTheme.removeEventListener('change', this.onSystemThemeChange);
+        this.onWorkflowStepChange.unsubscribe();
     }
 
     private setDarkMode(enabled: boolean): void {
