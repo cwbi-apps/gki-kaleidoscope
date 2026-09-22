@@ -1,4 +1,4 @@
-name: Upload Name Resolution OpenSearch Lambda to Dev S3
+name: (Dev) Lambda - Name Resolution OpenSearch
 
 on:
   push:

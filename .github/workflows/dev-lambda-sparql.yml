@@ -1,4 +1,4 @@
-name: Upload SPARQL Lambda to Dev S3
+name: (Dev) Lambda - SPARQL
 
 on:
   push:
