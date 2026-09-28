@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage, JobStartResponse, LocationPage, ServerChatResponse } from '../models/chat.model';
 import { MockUtil } from '../mock-util';
 import { environment } from '../../environments/environment';
+import { apiBase } from './url.util';
 import { GeoObject } from '../models/geoobject.model';
 import { ExplorerSessionStateService } from './explorer-session-state.service';
 import { pollJob } from './job-polling.util';
@@ -59,9 +60,9 @@ export class ChatService {
       params = params.append("sessionId", sessionId);
       params = params.append("prompt", message.text);
 
-      return firstValueFrom(this.http.get<JobStartResponse>(environment.apiUrl + 'api/chat/prompt/start', { params }))
+      return firstValueFrom(this.http.get<JobStartResponse>(apiBase() + 'api/chat/prompt/start', { params }))
         .then(({ jobId }) => {
-          const statusUrl = environment.apiUrl + 'api/chat/prompt/status/' + jobId;
+          const statusUrl = apiBase() + 'api/chat/prompt/status/' + jobId;
           onJobStarted?.(statusUrl);
           return pollJob<ServerChatResponse>(this.http, statusUrl);
         })
@@ -125,8 +126,8 @@ export class ChatService {
         offset
       }
 
-      return firstValueFrom(this.http.post<JobStartResponse>(environment.apiUrl + 'api/chat/get-locations/start', params))
-        .then(({ jobId }) => pollJob<LocationPage[]>(this.http, environment.apiUrl + 'api/chat/get-locations/status/' + jobId))
+      return firstValueFrom(this.http.post<JobStartResponse>(apiBase() + 'api/chat/get-locations/start', params))
+        .then(({ jobId }) => pollJob<LocationPage[]>(this.http, apiBase() + 'api/chat/get-locations/status/' + jobId))
         .then(pages => {
           this.explorerSessionState.cachePages(pages, 'chat-mapit', cacheId);
           return pages;
@@ -167,7 +168,7 @@ export class ChatService {
         sortDirection
       }
 
-      return firstValueFrom(this.http.post<LocationPage>(environment.apiUrl + 'api/chat/get-page', params))
+      return firstValueFrom(this.http.post<LocationPage>(apiBase() + 'api/chat/get-page', params))
         .then(page => {
           this.explorerSessionState.cachePages([page], 'page-query', cacheId);
           return page;
@@ -186,7 +187,7 @@ export class ChatService {
       sortDirection
     };
 
-    return firstValueFrom(this.http.post(environment.apiUrl + 'api/chat/export-page', params, {
+    return firstValueFrom(this.http.post(apiBase() + 'api/chat/export-page', params, {
       responseType: 'blob'
     }));
   }

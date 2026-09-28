@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 
 import { environment } from '../../environments/environment';
+import { apiBase } from './url.util';
 import { StyleConfig } from '../models/style.model';
 import { MockUtil } from '../mock-util';
 import { VectorLayer } from '../models/vector-layer.model';
@@ -30,7 +31,7 @@ export class ConfigurationService {
     // else
     // {
       // Uncomment below to make a real HTTP request
-      return firstValueFrom(this.http.get<Configuration>(environment.apiUrl + 'api/configuration/get')).then(configuration => {
+      return firstValueFrom(this.http.get<Configuration>(apiBase() + 'api/configuration/get')).then(configuration => {
         configuration.layers.map(l => l.id = uuidv4())
 
         localStorage.setItem('token', configuration.token);
@@ -52,7 +53,7 @@ export class ConfigurationService {
     // });
 
     // Uncomment below to make a real HTTP request
-    return firstValueFrom(this.http.get<StyleConfig>(environment.apiUrl + 'api/configuration/styles'));
+    return firstValueFrom(this.http.get<StyleConfig>(apiBase() + 'api/configuration/styles'));
   }
 
   getVectorLayers(): Promise<VectorLayer[]> {
@@ -65,7 +66,7 @@ export class ConfigurationService {
     // });
 
     // Uncomment below to make a real HTTP request
-    return firstValueFrom(this.http.get<VectorLayer[]>(environment.apiUrl + 'api/configuration/vector-layers')).then(layers => {
+    return firstValueFrom(this.http.get<VectorLayer[]>(apiBase() + 'api/configuration/vector-layers')).then(layers => {
       layers.map(l => l.id = uuidv4())
 
       return layers;

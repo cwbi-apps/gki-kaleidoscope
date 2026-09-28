@@ -5,7 +5,7 @@ import { GeoObject } from '../models/geoobject.model';
 import { MockUtil } from '../mock-util';
 import { GprGraph } from '../graph-explorer/graph-explorer.component';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { environment } from '../../environments/environment';
+import { apiBase } from './url.util';
 import { firstValueFrom } from 'rxjs';
 import { JobStartResponse, LocationPage } from '../models/chat.model';
 import { pollJob } from './job-polling.util';
@@ -66,12 +66,12 @@ export class ExplorerService {
      * Promise still resolves/rejects exactly as before, so callers (and
      * their loading spinners) need no changes.
      */
-    return firstValueFrom(this.http.post<JobStartResponse>(environment.apiUrl + 'api/neighbors/start', { uri: uri, excludedTypes: sExcludedTypes }))
-      .then(({ jobId }) => pollJob<GprGraph>(this.http, environment.apiUrl + 'api/neighbors/status/' + jobId));
+    return firstValueFrom(this.http.post<JobStartResponse>(apiBase() + 'api/neighbors/start', { uri: uri, excludedTypes: sExcludedTypes }))
+      .then(({ jobId }) => pollJob<GprGraph>(this.http, apiBase() + 'api/neighbors/status/' + jobId));
   }
 
   fullTextLookup(query: string): Promise<LocationPage> {
-    return firstValueFrom(this.http.post<LocationPage>(environment.apiUrl + 'api/full-text-lookup', { query: query }));
+    return firstValueFrom(this.http.post<LocationPage>(apiBase() + 'api/full-text-lookup', { query: query }));
   }
 
   async query(sparqlText: string): Promise<SPARQLResultSet> {
@@ -169,6 +169,6 @@ export class ExplorerService {
     params = params.append("includeGeometry", includeGeometry);
     params = params.append("hasPrefix", hasPrefix);
 
-    return firstValueFrom(this.http.get<GeoObject>(environment.apiUrl + 'api/get-attributes', { params }));
+    return firstValueFrom(this.http.get<GeoObject>(apiBase() + 'api/get-attributes', { params }));
   }
 }

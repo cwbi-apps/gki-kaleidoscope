@@ -18,6 +18,8 @@
 		<aws.version>2.47.4</aws.version>
 		<spring.version>3.5.13</spring.version>
 		<geotools.version>32.2</geotools.version>
+		<!-- Servlet context path for the cargo-run profile, e.g. -Dapp.context=/kaleidoscope -->
+		<app.context>/</app.context>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -241,7 +243,7 @@
 									<artifactId>geo-ai-explorer-api</artifactId>
 									<type>war</type>
 									<properties>
-										<context>/</context>
+										<context>${app.context}</context>
 									</properties>
 								</deployable>
 							</deployables>
