@@ -35,7 +35,7 @@ env:
   ECR_REPOSITORY: kaleidoscope-gki/kaleidoscope
   NODE_VERSION: "22"
   JAVA_VERSION: "21"
-  CONTEXT_PATH: /chat
+  CONTEXT_PATH: /
 
   DEPLOY_ENV: ${{ github.event_name == 'push' && 'dev' || inputs.environment }}
 
