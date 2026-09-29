@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Geospatial Knowledge Portal</title>
+  <meta name="description" content="Choose between Kaleidoscope, a Geo-AI chat explorer, and GeoPrism Registry, a geospatial data builder.">
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --text: #1b2330;
+      --muted: #5a6677;
+      --border: #dde3ea;
+      --accent-chat: #2f6fdf;
+      --accent-gpr: #1f8a5b;
+      --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 16px rgba(16, 24, 40, .06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f141b;
+        --surface: #171e27;
+        --text: #e6ebf1;
+        --muted: #9aa6b5;
+        --border: #2a3441;
+        --accent-chat: #6b9cf5;
+        --accent-gpr: #4cc38f;
+        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    main {
+      width: 100%;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 64px 16px 32px;
+      flex: 1;
+    }
+    header { max-width: 680px; margin-bottom: 40px; }
+    h1 { font-size: clamp(1.75rem, 4vw, 2.4rem); line-height: 1.2; margin: 0 0 12px; letter-spacing: -.01em; }
+    .lede { color: var(--muted); font-size: 1.1rem; margin: 0; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      --accent: var(--accent-chat);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--accent);
+      border-radius: 12px;
+      padding: 28px 24px 24px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+    }
+    .card.gpr { --accent: var(--accent-gpr); }
+    .eyebrow {
+      font-size: .78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--accent);
+      margin: 0 0 6px;
+    }
+    .card h2 { margin: 0 0 10px; font-size: 1.45rem; }
+    .card p { margin: 0 0 14px; color: var(--muted); }
+    .card ul { margin: 0 0 24px; padding-left: 1.1em; color: var(--text); }
+    .card li { margin: 4px 0; }
+    .actions { margin-top: auto; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 8px;
+      transition: filter .15s ease, transform .15s ease;
+    }
+    @media (prefers-color-scheme: dark) { .btn { color: #0f141b; } }
+    .btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .btn:focus-visible, .link:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .link { color: var(--accent); font-weight: 500; text-decoration: none; }
+    .link:hover { text-decoration: underline; }
+
+    .help {
+      margin-top: 40px;
+      padding: 20px 24px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+    }
+    .help strong { color: var(--text); }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: .85rem;
+      padding: 24px 16px 32px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Geospatial Knowledge Portal</h1>
+      <p class="lede">
+        This site hosts two connected tools. One helps you <strong>ask questions</strong> of geospatial
+        knowledge using AI; the other helps you <strong>build and manage</strong> the authoritative
+        geospatial data behind it. Pick the one that fits what you're trying to do.
+      </p>
+    </header>
+
+    <section class="cards" aria-label="Applications">
+      <article class="card chat">
+        <p class="eyebrow">Explore &amp; ask</p>
+        <h2>Kaleidoscope</h2>
+        <p>A Geo-AI explorer for chatting with the geospatial knowledge graph in plain language.</p>
+        <ul>
+          <li>Ask questions about places, features, and how they relate</li>
+          <li>See answers on a map alongside the conversation</li>
+          <li>Discover data without knowing the underlying schema</li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="/chat/">Open Kaleidoscope</a>
+        </div>
+      </article>
+
+      <article class="card gpr">
+        <p class="eyebrow">Build &amp; manage</p>
+        <h2>GeoPrism Registry</h2>
+        <p>A data builder for creating, curating, and publishing authoritative geospatial master data.</p>
+        <ul>
+          <li>Define geo-object types and hierarchies</li>
+          <li>Import, edit, and validate geographic data over time</li>
+          <li>Publish versioned lists and share data with other systems</li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="/gpr/">Open GeoPrism Registry</a>
+          <a class="link" href="https://geoprismregistry.com/" target="_blank" rel="noopener">Documentation ↗</a>
+        </div>
+      </article>
+    </section>
+
+    <aside class="help">
+      <strong>Not sure where to start?</strong>
+      If you want to <em>find answers</em> or explore what's known about a place, use
+      <a class="link" href="/chat/" style="--accent: var(--accent-chat)">Kaleidoscope</a>.
+      If you need to <em>add, change, or maintain</em> the data itself, use
+      <a class="link" href="/gpr/" style="--accent: var(--accent-gpr)">GeoPrism Registry</a>.
+    </aside>
+  </main>
+
+  <footer>
+    Developed by TerraFrame with funding from the U.S. Army Corps of Engineers (USACE).
+  </footer>
+</body>
+</html>
