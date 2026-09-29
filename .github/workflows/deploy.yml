@@ -35,6 +35,7 @@ env:
   ECR_REPOSITORY: kaleidoscope-gki/kaleidoscope
   NODE_VERSION: "22"
   JAVA_VERSION: "21"
+  CONTEXT_PATH: /chat
 
   DEPLOY_ENV: ${{ github.event_name == 'push' && 'dev' || inputs.environment }}
 
@@ -123,11 +124,17 @@ jobs:
 
           IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY"
 
+          # '/chat' -> 'chat', '/' -> 'ROOT', '/a/b' -> 'a#b' (Tomcat webapp naming)
+          CONTEXT_DIR=$(echo "$CONTEXT_PATH" | sed -e 's|^/*||' -e 's|/*$||' -e 's|/|#|g')
+          CONTEXT_DIR=${CONTEXT_DIR:-ROOT}
+
           echo "Environment: $DEPLOY_ENV"
           echo "Commit:      $IMAGE_SHA"
           echo "Image:       $IMAGE"
+          echo "Context:     $CONTEXT_PATH (webapps/$CONTEXT_DIR)"
 
           docker build \
+            --build-arg CONTEXT_PATH="$CONTEXT_DIR" \
             --tag "$IMAGE:$DEPLOY_ENV" \
             --tag "$IMAGE:$IMAGE_SHA" \
             .
@@ -135,8 +142,6 @@ jobs:
           docker push "$IMAGE:$DEPLOY_ENV"
           docker push "$IMAGE:$IMAGE_SHA"
 
-          # Keep :latest behaving the way it does today,
-          # but only for the dev environment.
           if [ "$DEPLOY_ENV" = "dev" ]; then
             docker tag "$IMAGE:$IMAGE_SHA" "$IMAGE:latest"
             docker push "$IMAGE:latest"
