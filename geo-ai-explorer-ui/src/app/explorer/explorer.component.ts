@@ -29,6 +29,7 @@ import { TabsModule } from 'primeng/tabs';
 import { debounce } from 'lodash';
 import { VectorLayer } from '../models/vector-layer.model';
 import { environment } from '../../environments/environment';
+import { apiBase } from '../service/url.util';
 import { faAnglesLeft, faAnglesRight, faArrowLeft, faArrowRight, faDownLeftAndUpRightToCenter, faFloppyDisk, faShareNodes, faUpRightAndDownLeftFromCenter } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ButtonModule } from 'primeng/button';
@@ -1922,12 +1923,12 @@ export class ExplorerComponent implements OnInit, OnDestroy {
                     mapbox: {
                         'type': 'raster',
                         'tiles': [
-                            environment.apiUrl + "api/mapbox/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90"
+                            apiBase() + "api/mapbox/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90"
                         ],
                         'tileSize': 512
                     }
                 },
-                glyphs: environment.apiUrl + "glyphs/{fontstack}/{range}.pbf",
+                glyphs: apiBase() + "glyphs/{fontstack}/{range}.pbf",
                 layers: [
                     {
                         id: layer.id,

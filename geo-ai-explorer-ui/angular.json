@@ -32,13 +32,11 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": [
-            ]
+            "scripts": []
           },
           "configurations": {
             "production": {
-              "budgets": [
-              ],
+              "budgets": [],
               "outputHashing": "all",
               "fileReplacements": [
                 {
@@ -51,6 +49,18 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "development-context": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "baseHref": "/kaleidoscope/",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.context.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -63,6 +73,10 @@
             },
             "development": {
               "buildTarget": "geo-ai-explorer:build:development"
+            },
+            "development-context": {
+              "buildTarget": "geo-ai-explorer:build:development-context",
+              "servePath": "/kaleidoscope/"
             }
           },
           "defaultConfiguration": "development"

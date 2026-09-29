@@ -23,11 +23,18 @@ set -e
 tag=${tag:-'latest'}
 artifact=geo-ai-explorer-api
 
+# Servlet context path the app is deployed under, e.g. '/kaleidoscope'.
+# Defaults to the root context. Converted to Tomcat's webapp directory naming
+# ('/' -> ROOT, '/a/b' -> a#b).
+context_path=${context_path:-'/'}
+context_dir=$(echo "$context_path" | sed -e 's|^/*||' -e 's|/*$||' -e 's|/|#|g')
+context_dir=${context_dir:-ROOT}
+
 ([ -d target ] && rm -rf target) || true
 mkdir target
 cp ../../../geo-ai-explorer-api/target/$artifact.war target/$artifact.war
 
-docker build -t terraframe/$artifact:$tag .
+docker build --build-arg CONTEXT_PATH="$context_dir" -t terraframe/$artifact:$tag .
 
 if [ "$RELEASE_VERSION" != "latest" ]; then
   docker tag terraframe/$artifact:$tag terraframe/$artifact:latest

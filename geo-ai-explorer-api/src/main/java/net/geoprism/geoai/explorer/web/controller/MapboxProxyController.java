@@ -54,7 +54,16 @@ public class MapboxProxyController {
             @RequestParam MultiValueMap<String, String> queryParams
     ) throws IOException, InterruptedException {
       
+      // getRequestURI() includes the servlet context path (e.g. "/kaleidoscope"
+      // when not deployed at the root), so strip it before stripping our own
+      // "/api/mapbox" prefix.
       String requestUri = request.getRequestURI();
+      String contextPath = request.getContextPath();
+
+      if (contextPath != null && !contextPath.isEmpty() && requestUri.startsWith(contextPath))
+      {
+        requestUri = requestUri.substring(contextPath.length());
+      }
 
       String mapboxPath = requestUri.replaceFirst("^/api/mapbox", "");
 
