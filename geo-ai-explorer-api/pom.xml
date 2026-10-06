@@ -12,8 +12,10 @@
 	<name>Geo AI explorer API server</name>
 	<description></description>
 	<properties>
-		<maven.compiler.release>21</maven.compiler.release>
-		<java.version>21</java.version>
+		<maven.compiler.release>25</maven.compiler.release>
+		<java.version>25</java.version>
+		<!-- 1.18.40+ is required for JDK 25 -->
+		<lombok.version>1.18.48</lombok.version>
 		<aws.version>2.55.11</aws.version>
 		<spring.version>4.1.1</spring.version>
 		<jena.version>6.2.0</jena.version>
@@ -180,7 +182,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.36</version>
+			<version>${lombok.version}</version>
 			<scope>provided</scope>
 		</dependency>
 		
@@ -327,6 +329,22 @@
 		<directory>target</directory>
 		<finalName>geo-ai-explorer-api</finalName>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.14.0</version>
+				<configuration>
+					<!-- Since JDK 23, javac no longer runs annotation processors just because
+					     they're on the classpath; Lombok has to be registered explicitly. -->
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-war-plugin</artifactId>
