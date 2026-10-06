@@ -5,12 +5,12 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import net.geoprism.geoai.explorer.core.config.TestConfiguration;
 
@@ -51,7 +51,7 @@ public class StyleTest
     {
       System.out.println(mapper.writeValueAsString(map));
     }
-    catch (JsonProcessingException e)
+    catch (JacksonException e)
     {
       throw new RuntimeException(e);
     }

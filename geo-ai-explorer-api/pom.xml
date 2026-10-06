@@ -12,21 +12,55 @@
 	<name>Geo AI explorer API server</name>
 	<description></description>
 	<properties>
-		<maven.compiler.source>17</maven.compiler.source>
-		<maven.compiler.target>17</maven.compiler.target>
-		<java.version>17</java.version>
-		<aws.version>2.47.4</aws.version>
-		<spring.version>3.5.13</spring.version>
-		<geotools.version>32.2</geotools.version>
+		<maven.compiler.release>21</maven.compiler.release>
+		<java.version>21</java.version>
+		<aws.version>2.55.11</aws.version>
+		<spring.version>4.1.1</spring.version>
+		<jena.version>6.2.0</jena.version>
+		<!-- Same Netty line the AWS SDK ${aws.version} is built against -->
+		<netty.version>4.1.138.Final</netty.version>
+		<jts.version>1.20.0</jts.version>
+		<!-- GeoTools is only used by the tests -->
+		<geotools.version>34.5</geotools.version>
 		<!-- Servlet context path for the cargo-run profile, e.g. -Dapp.context=/kaleidoscope -->
 		<app.context>/</app.context>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
+			<!-- Order matters: Maven uses the FIRST imported BOM that manages an artifact. -->
+			<!-- amazon-neptune-sigv4-signer hard-codes netty-all 4.1.128.Final, and the
+			     AWS SDK is built against Netty 4.1; force all Netty modules (including
+			     netty-all) to the patched 4.1 release, ahead of Spring Boot's Netty. -->
+			<dependency>
+				<groupId>io.netty</groupId>
+				<artifactId>netty-bom</artifactId>
+				<version>${netty.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<!-- Spring Boot's BOM must come before the AWS and Jena BOMs: one of those
+			     pins spring-context/web/webmvc/test to Spring 5.3.39 (javax), which
+			     broke SpringBootServletInitializer. It also manages Jackson 2 and 3. -->
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-dependencies</artifactId>
+				<version>${spring.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<dependency>
 				<groupId>software.amazon.awssdk</groupId>
 				<artifactId>bom</artifactId>
 				<version>${aws.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<!-- Pin every Jena module to one version so amazon-neptune-sparql-java-sigv4
+			     can't pull in its older jena-arq/jena-core transitively -->
+			<dependency>
+				<groupId>org.apache.jena</groupId>
+				<artifactId>jena-bom</artifactId>
+				<version>${jena.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -44,34 +78,41 @@
 			</exclusions>
 		</dependency>
 
-		<!--  Spring!  -->
+		<!--  Spring Boot 4 (modular starters - don't use the "classic" starters: they
+		      turn on every auto-configuration, e.g. gRPC, without its libraries)  -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-			<version>${spring.version}</version>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
-			<version>${spring.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
-			<version>${spring.version}</version>
 		</dependency>
-		<!-- 
-    -->
+		<!-- WAR deployed to an external Tomcat -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-tomcat</artifactId>
-			<version>${spring.version}</version>
+			<artifactId>spring-boot-starter-tomcat-runtime</artifactId>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<version>${spring.version}</version>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Boot 4's test auto-config wires Spring Security into MockMvc, which needs
+		     spring-security-test on the test classpath (version from Boot's BOM) -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<!-- AWS -->
@@ -94,7 +135,7 @@
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>amazon-neptune-sparql-java-sigv4</artifactId>
-			<version>4.0.0</version>
+			<version>4.1.0</version>
 			<exclusions>
 		        <exclusion>
 		            <groupId>org.slf4j</groupId>
@@ -110,12 +151,12 @@
 		<dependency>
 			<groupId>org.apache.jena</groupId>
 			<artifactId>jena-rdfconnection</artifactId>
-			<version>5.3.0</version>
+			<version>${jena.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.jena</groupId>
 			<artifactId>jena-geosparql</artifactId>
-			<version>5.3.0</version>
+			<version>${jena.version}</version>
 		</dependency>
 		<!-- Open Search -->
 		<dependency>
@@ -126,14 +167,14 @@
 		<dependency>
 			<groupId>org.opensearch.client</groupId>
 			<artifactId>opensearch-java</artifactId>
-			<version>2.6.0</version>
+			<version>3.10.0</version>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.geotools/gt-geojson -->
+		<!-- GeoJSON serialization of JTS geometries (replaces gt-geojson) -->
 		<dependency>
-			<groupId>org.geotools</groupId>
-			<artifactId>gt-geojson</artifactId>
-			<version>${geotools.version}</version>
+			<groupId>org.locationtech.jts.io</groupId>
+			<artifactId>jts-io-common</artifactId>
+			<version>${jts.version}</version>
 		</dependency>
 
 		<dependency>
@@ -173,6 +214,13 @@
 			<scope>test</scope>
 
 		</dependency>
+		<!-- Test-only: kept in case integration tests use GeometryJSON -->
+		<dependency>
+			<groupId>org.geotools</groupId>
+			<artifactId>gt-geojson</artifactId>
+			<version>${geotools.version}</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<profiles>
@@ -211,11 +259,11 @@
 				<plugins>
 					<plugin>
 						<groupId>org.codehaus.cargo</groupId>
-						<artifactId>cargo-maven2-plugin</artifactId>
-						<version>1.9.0</version>
+						<artifactId>cargo-maven3-plugin</artifactId>
+						<version>1.10.29</version>
 						<configuration>
 							<container>
-								<containerId>tomcat9x</containerId>
+								<containerId>tomcat11x</containerId>
 								<artifactInstaller>
 									<groupId>org.apache.tomcat</groupId>
 									<artifactId>tomcat</artifactId>
@@ -231,9 +279,8 @@
 									<cargo.tomcat.uriencoding>UTF-8</cargo.tomcat.uriencoding>
 									<cargo.jvmargs>
 										-Xmx5120M
-										-Xdebug
-										-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000
-										-Dtomcat.home=/${project.basedir}/target/cargo/configurations/tomcat8x
+										-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000
+										-Dtomcat.home=/${project.basedir}/target/cargo/configurations/tomcat11x
 									</cargo.jvmargs>
 								</properties>
 							</configuration>

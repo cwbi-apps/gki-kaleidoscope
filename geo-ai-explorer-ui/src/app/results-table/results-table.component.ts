@@ -409,7 +409,11 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
         return !!item.loading || this.loadingPageDisplayKeys.has(this.getPageDisplayKey(item.page, item.index));
     }
 
-    selectActivePage(key: string | number): void {
+    selectActivePage(key: string | number | undefined): void {
+        if (key == null) {
+            return;
+        }
+
         this.activePageDisplayKey = String(key);
         this.rebuildPageDisplayState();
         this.ensureTypeLoaded(this.activePageDisplayKey);

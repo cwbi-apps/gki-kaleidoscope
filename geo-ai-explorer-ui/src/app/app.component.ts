@@ -1,4 +1,4 @@
-import { NgIf } from '@angular/common';
+
 import { Component, inject, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
@@ -9,7 +9,7 @@ import { getWorkflowStep, WorkflowStep } from './state/explorer.state';
 
 @Component({
     selector: 'app-root',
-    imports: [RouterOutlet, NgIf, TooltipModule],
+    imports: [RouterOutlet, TooltipModule],
     templateUrl: './app.component.html',
     styleUrl: './app.component.scss'
 })

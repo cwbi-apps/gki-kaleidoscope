@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,7 +42,7 @@ public class ConfigurationController
 
   @GetMapping("/api/configuration/get")
   @ResponseBody
-  public ResponseEntity<Configuration> getConfiguration(CsrfToken token) throws IOException, ParseException
+  public ResponseEntity<Configuration> getConfiguration(CsrfToken token) throws IOException
   {
     Configuration configuration = new Configuration();
     configuration.setStyles(this.service.getStyles());
@@ -59,14 +58,14 @@ public class ConfigurationController
 
   @GetMapping("/api/configuration/styles")
   @ResponseBody
-  public ResponseEntity<Map<String, Style>> getStyles() throws IOException, ParseException
+  public ResponseEntity<Map<String, Style>> getStyles() throws IOException
   {
     return new ResponseEntity<Map<String, Style>>(this.service.getStyles(), HttpStatus.OK);
   }
 
   @GetMapping("/api/configuration/vector-layers")
   @ResponseBody
-  public ResponseEntity<List<VectorLayer>> getVectorLayerConfiguration() throws IOException, ParseException
+  public ResponseEntity<List<VectorLayer>> getVectorLayerConfiguration() throws IOException
   {
     return new ResponseEntity<List<VectorLayer>>(this.service.getVectorLayers(), HttpStatus.OK);
   }

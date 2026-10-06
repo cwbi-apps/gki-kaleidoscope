@@ -5,8 +5,7 @@ import { Edge, Node, GraphComponent, GraphModule, NgxGraphStates, NgxGraphStateC
 import { SELECTED_COLOR } from '../explorer/defaultQueries';
 import { ExplorerService } from '../service/explorer.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-// @ts-ignore
-import ColorGen from "color-generator";
+import ColorGen from "../util/color-generator";
 import { GeoObject } from '../models/geoobject.model';
 import { Store } from '@ngrx/store';
 import { ExplorerActions, getSelectedObject, getStyles, getWorkflowState, getZoomMap, highlightedObject, WorkflowState, WorkflowStep } from '../state/explorer.state';

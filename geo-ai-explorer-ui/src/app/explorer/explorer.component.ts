@@ -1723,9 +1723,12 @@ export class ExplorerComponent implements OnInit, OnDestroy {
             const source = this.map?.getSource(type);
 
             if (source instanceof GeoJSONSource) {
-                const data = ((source as GeoJSONSource)._data) as AllGeoJSON;
+                const sourceData = (source as GeoJSONSource)._data;
+                const data = (sourceData?.geojson ?? (sourceData?.updateable
+                    ? { type: 'FeatureCollection', features: Array.from(sourceData.updateable.values()) }
+                    : undefined)) as AllGeoJSON | undefined;
 
-                if ((data as any)?.features?.length > 0) {
+                if (data && (data as any).features?.length > 0) {
                     return bboxPolygon(bbox(data));
                 }
             }

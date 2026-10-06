@@ -1,46 +1,31 @@
 package net.geoprism.geoai.explorer.core.serialization;
 
-import java.io.IOException;
-
-import org.geotools.geojson.geom.GeometryJSON;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.locationtech.jts.geom.Geometry;
-import org.springframework.boot.json.JsonParseException;
+import org.locationtech.jts.io.geojson.GeoJsonWriter;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ser.std.StdSerializer;
 
-@SuppressWarnings("deprecation")
 public class GeometrySerializer extends StdSerializer<Geometry>
 {
-
-  private static final long serialVersionUID = -904451118296177873L;
+  private static final int DECIMALS = 4;
 
   public GeometrySerializer()
   {
-    this(null);
-  }
-
-  public GeometrySerializer(Class<Geometry> t)
-  {
-    super(t);
+    super(Geometry.class);
   }
 
   @Override
-  public void serialize(Geometry value, JsonGenerator gen, SerializerProvider provider) throws IOException
+  public void serialize(Geometry value, JsonGenerator gen, SerializationContext context) throws JacksonException
   {
-    try
+    if (value != null)
     {
-      if (value != null)
-      {
-        gen.writeObject(new JSONParser().parse(new GeometryJSON().toString(value)));
-      }
-    }
-    catch (IOException | ParseException e)
-    {
-      throw new JsonParseException(e);
+      GeoJsonWriter writer = new GeoJsonWriter(DECIMALS);
+      writer.setEncodeCRS(false);
+
+      gen.writeRawValue(writer.write(value));
     }
   }
 

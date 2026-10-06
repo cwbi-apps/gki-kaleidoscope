@@ -1,273 +1,276 @@
 <div class="aichat-root">
-<p-confirmDialog appendTo="body"></p-confirmDialog>
+  <p-confirmDialog appendTo="body"></p-confirmDialog>
 
-<div
-  #chatContainer
-  class="chat-container"
-  [class.minimized]="minimized"
-  [style.--chat-sidebar-width.px]="sidebarWidthPx">
+  <div
+    #chatContainer
+    class="chat-container"
+    [class.minimized]="minimized"
+    [style.--chat-sidebar-width.px]="sidebarWidthPx">
 
-  <div *ngIf="mapLoading" class="spinner-overlay">
-    <p-progress-spinner ariaLabel="loading" />
-  </div>
+    @if (mapLoading) {
+      <div class="spinner-overlay">
+        <p-progress-spinner ariaLabel="loading" />
+      </div>
+    }
 
-  <aside *ngIf="!minimized" class="conversation-sidebar">
-    <div class="sidebar-tabs" role="tablist" aria-label="AI chat sidebar">
-      <button
-        type="button"
-        class="sidebar-tab"
-        [class.active]="activeSidebarTab === 'chat'"
-        (click)="setActiveSidebarTab('chat')">
-        Chat History
-      </button>
-
-      <button
-        type="button"
-        class="sidebar-tab"
-        [class.active]="activeSidebarTab === 'queries'"
-        (click)="setActiveSidebarTab('queries')">
-        Saved Queries
-      </button>
-    </div>
-
-    <ng-container *ngIf="activeSidebarTab === 'chat'">
-      <div class="conversation-tabs">
-        <button
-          type="button"
-          *ngFor="let conversation of conversations"
-          class="conversation-tab"
-          [class.active]="conversation.id === activeConversationId"
-          (click)="selectConversation(conversation.id)">
-
-          <span
-            *ngIf="editingConversationId !== conversation.id"
-            class="conversation-title"
-            title="Double-click to rename"
-            (dblclick)="startEditingConversationTitle($event, conversation)">
-            {{ conversation.title }}
-          </span>
-
-          <input
-            *ngIf="editingConversationId === conversation.id"
-            class="conversation-title-input"
-            type="text"
-            [(ngModel)]="editingConversationTitle"
-            (click)="$event.stopPropagation()"
-            (keydown.enter)="saveConversationTitle($event)"
-            (keydown.escape)="cancelConversationTitleEdit($event)"
-            (blur)="saveConversationTitle($event)"
-            autofocus />
-
-          <span
-            class="conversation-edit"
-            *ngIf="editingConversationId !== conversation.id"
-            [title]="'Edit conversation name'"
-            (click)="startEditingConversationTitle($event, conversation)">
-            <fa-icon [icon]="edit"></fa-icon>
-          </span>
-
-          <span *ngIf="conversation.loading" class="conversation-loading">●</span>
-
-          <span
-            class="conversation-close"
-            *ngIf="conversations.length > 1 || editingConversationId === conversation.id"
-            [title]="editingConversationId === conversation.id ? 'Cancel rename' : 'Delete conversation'"
+    @if (!minimized) {
+      <aside class="conversation-sidebar">
+        <div class="sidebar-tabs" role="tablist" aria-label="AI chat sidebar">
+          <button
+            type="button"
+            class="sidebar-tab"
+            [class.active]="activeSidebarTab === 'chat'"
+            (click)="setActiveSidebarTab('chat')">
+            Chat History
+          </button>
+          <button
+            type="button"
+            class="sidebar-tab"
+            [class.active]="activeSidebarTab === 'queries'"
+            (click)="setActiveSidebarTab('queries')">
+            Saved Queries
+          </button>
+        </div>
+        @if (activeSidebarTab === 'chat') {
+          <div class="conversation-tabs">
+            @for (conversation of conversations; track conversation) {
+              <button
+                type="button"
+                class="conversation-tab"
+                [class.active]="conversation.id === activeConversationId"
+                (click)="selectConversation(conversation.id)">
+                @if (editingConversationId !== conversation.id) {
+                  <span
+                    class="conversation-title"
+                    title="Double-click to rename"
+                    (dblclick)="startEditingConversationTitle($event, conversation)">
+                    {{ conversation.title }}
+                  </span>
+                }
+                @if (editingConversationId === conversation.id) {
+                  <input
+                    class="conversation-title-input"
+                    type="text"
+                    [(ngModel)]="editingConversationTitle"
+                    (click)="$event.stopPropagation()"
+                    (keydown.enter)="saveConversationTitle($event)"
+                    (keydown.escape)="cancelConversationTitleEdit($event)"
+                    (blur)="saveConversationTitle($event)"
+                    autofocus />
+                }
+                @if (editingConversationId !== conversation.id) {
+                  <span
+                    class="conversation-edit"
+                    [title]="'Edit conversation name'"
+                    (click)="startEditingConversationTitle($event, conversation)">
+                    <fa-icon [icon]="edit"></fa-icon>
+                  </span>
+                }
+                @if (conversation.loading) {
+                  <span class="conversation-loading">●</span>
+                }
+                @if (conversations.length > 1 || editingConversationId === conversation.id) {
+                  <span
+                    class="conversation-close"
+                    [title]="editingConversationId === conversation.id ? 'Cancel rename' : 'Delete conversation'"
             (click)="editingConversationId === conversation.id
               ? cancelConversationTitleEdit($event)
               : deleteConversation($event, conversation.id)">
-            <fa-icon [icon]="closeConversationIcon"></fa-icon>
-          </span>
-        </button>
+                    <fa-icon [icon]="closeConversationIcon"></fa-icon>
+                  </span>
+                }
+              </button>
+            }
+          </div>
+          <p-button
+            styleClass="new-conversation-button"
+            severity="secondary"
+            pTooltip="New conversation"
+            (onClick)="newConversation()">
+            <fa-icon [icon]="newConversationIcon"></fa-icon>
+            <span>New chat</span>
+          </p-button>
+        }
+        @if (activeSidebarTab === 'queries') {
+          @if (savedQueries$ | async; as savedQueries) {
+            <div class="query-tabs">
+              @for (query of savedQueries; track query; let queryIndex = $index) {
+                <button
+                  type="button"
+                  class="query-tab"
+                  [id]="savedQueryElementId(query.id)"
+                  [class.highlight]="highlightSavedQueryId === query.id"
+                  (click)="openSavedQueryChat(query)">
+                  @if (editingSavedQueryId !== query.id) {
+                    <span
+                      class="query-title"
+                      >
+                      #{{ queryIndex + 1 }}
+                      {{ query.title }}
+                    </span>
+                  }
+                  @if (editingSavedQueryId === query.id) {
+                    <input
+                      class="query-title-input"
+                      type="text"
+                      [(ngModel)]="editingSavedQueryTitle"
+                      (click)="$event.stopPropagation()"
+                      (keydown.enter)="saveSavedQueryTitle($event, query)"
+                      (keydown.escape)="cancelSavedQueryTitleEdit($event)"
+                      autocomplete="off" />
+                  }
+                  <span class="query-meta">
+                    {{ formatQueryMeta(query) }}
+                  </span>
+                  <span class="query-date">
+                    {{ formatQueryDate(query) }}
+                  </span>
+                  <span class="query-actions">
+                    <span
+                      class="query-action"
+                      title="View on Map"
+                      (click)="viewCachedQuery(query); $event.stopPropagation()">
+                      <fa-icon [icon]="viewQueryIcon"></fa-icon>
+                    </span>
+                    <span
+                      class="query-action"
+                      title="Rename query"
+                      (click)="startEditingSavedQueryTitle($event, query)">
+                      <fa-icon [icon]="edit"></fa-icon>
+                    </span>
+                    <span
+                      class="query-action"
+                      title="Delete query"
+                      (click)="deleteCachedQuery($event, query)">
+                      <fa-icon [icon]="deleteQueryIcon"></fa-icon>
+                    </span>
+                  </span>
+                </button>
+              }
+              @if (savedQueries.length === 0) {
+                <div class="empty-query-history">
+                  No saved queries yet.
+                </div>
+              }
+            </div>
+          }
+        }
+        <p class="sidebar-storage-note">
+          Chat history and saved queries are stored in your browser's local storage.
+        </p>
+      </aside>
+    }
+
+    @if (!minimized) {
+      <div
+        class="sidebar-resize-handle"
+        title="Resize sidebar"
+        (mousedown)="startSidebarResize($event)">
       </div>
+    }
 
-      <p-button
-        styleClass="new-conversation-button"
-        severity="secondary"
-        pTooltip="New conversation"
-        (onClick)="newConversation()">
-        <fa-icon [icon]="newConversationIcon"></fa-icon>
-        <span>New chat</span>
-      </p-button>
-    </ng-container>
-
-    <ng-container *ngIf="activeSidebarTab === 'queries'">
-      <div class="query-tabs" *ngIf="savedQueries$ | async as savedQueries">
-        <button
-          type="button"
-          *ngFor="let query of savedQueries; let queryIndex = index"
-          class="query-tab"
-          [id]="savedQueryElementId(query.id)"
-          [class.highlight]="highlightSavedQueryId === query.id"
-          (click)="openSavedQueryChat(query)">
-
-          <span
-            class="query-title"
-            *ngIf="editingSavedQueryId !== query.id">
-            #{{ queryIndex + 1 }}
-            {{ query.title }}
-          </span>
-
-          <input
-            *ngIf="editingSavedQueryId === query.id"
-            class="query-title-input"
-            type="text"
-            [(ngModel)]="editingSavedQueryTitle"
-            (click)="$event.stopPropagation()"
-            (keydown.enter)="saveSavedQueryTitle($event, query)"
-            (keydown.escape)="cancelSavedQueryTitleEdit($event)"
-            autocomplete="off" />
-
-          <span class="query-meta">
-            {{ formatQueryMeta(query) }}
-          </span>
-
-          <span class="query-date">
-            {{ formatQueryDate(query) }}
-          </span>
-
-          <span class="query-actions">
-            <span
-              class="query-action"
-              title="View on Map"
-              (click)="viewCachedQuery(query); $event.stopPropagation()">
-              <fa-icon [icon]="viewQueryIcon"></fa-icon>
-            </span>
-
-            <span
-              class="query-action"
-              title="Rename query"
-              (click)="startEditingSavedQueryTitle($event, query)">
-              <fa-icon [icon]="edit"></fa-icon>
-            </span>
-
-            <span
-              class="query-action"
-              title="Delete query"
-              (click)="deleteCachedQuery($event, query)">
-              <fa-icon [icon]="deleteQueryIcon"></fa-icon>
-            </span>
-          </span>
-        </button>
-
-        <div class="empty-query-history" *ngIf="savedQueries.length === 0">
-          No saved queries yet.
-        </div>
-      </div>
-    </ng-container>
-
-    <p class="sidebar-storage-note">
-      Chat history and saved queries are stored in your browser's local storage.
-    </p>
-  </aside>
-
-  <div
-    *ngIf="!minimized"
-    class="sidebar-resize-handle"
-    title="Resize sidebar"
-    (mousedown)="startSidebarResize($event)">
-  </div>
-
-  <main class="chat-main" (click)="cancelSavedQueryTitleEdit()">
-    <div *ngIf="!minimized" class="messages">
-      <ng-container>
-        <div
-          *ngFor="let msg of renderedMessages; let last = first; trackBy: trackByMessageId"
-          class="message"
-          [id]="chatMessageElementId(msg.id)"
+    <main class="chat-main" (click)="cancelSavedQueryTitleEdit()">
+      @if (!minimized) {
+        <div class="messages">
+          <ng-container>
+            @for (msg of renderedMessages; track trackByMessageId($index, msg); let last = $first) {
+              <div
+                class="message"
+                [id]="chatMessageElementId(msg.id)"
           [ngClass]="{
             'user': msg.sender === 'user',
             'system': msg.sender === 'system',
             'highlight': highlightChatMessageId === msg.id
           }">
-
-          <div class="sender-icon">
-            <fa-icon
-              *ngIf="msg.sender === 'user'"
-              class="icon"
-              [icon]="messageUserIcon">
-            </fa-icon>
-
-            <img
-              *ngIf="msg.sender === 'system'"
-              src="assets/system-logo.svg">
-          </div>
-
-          <label [for]="msg.id" class="vertical-layout">
-            <ng-container *ngIf="msg.loading">
-              <div class="dot-pulse-container">
-                <div class="dot-pulse"></div>
+                <div class="sender-icon">
+                  @if (msg.sender === 'user') {
+                    <fa-icon
+                      class="icon"
+                      [icon]="messageUserIcon">
+                    </fa-icon>
+                  }
+                  @if (msg.sender === 'system') {
+                    <img
+                      src="assets/system-logo.svg">
+                    }
+                  </div>
+                  <label [for]="msg.id" class="vertical-layout">
+                    @if (msg.loading) {
+                      <div class="dot-pulse-container">
+                        <div class="dot-pulse"></div>
+                      </div>
+                    }
+                    @if (!msg.loading) {
+                      @if (msg.reasoning) {
+                        <div
+                          class="reasoning-toggle"
+                          pTooltip
+                          [pTooltip]="msg.reasoning"
+                          tooltipPosition="top"
+                          tooltipStyleClass="reasoning-tooltip">
+                        <fa-icon [icon]="reasoningIcon"></fa-icon>
+                        <span>Reasoning</span>
+                      </div>
+                    }
+                    <span class="markdown-content" [innerHTML]="msg.renderedHtml"></span>
+                    @if (msg.mappable) {
+                      <div class="action mappable-actions">
+                        <p-button (onClick)="mapIt(msg)">
+                          <fa-icon [icon]="mapIcon"></fa-icon>
+                          View on Map
+                        </p-button>
+                        @if (msg.savedQueryIndex; as savedIndex) {
+                          <p-button
+                            severity="secondary"
+                            (onClick)="saveOrScrollQuery($event, msg)">
+                            <fa-icon [icon]="saveQueryIcon"></fa-icon>
+                            <span>Saved Query #{{ savedIndex }}</span>
+                          </p-button>
+                        }
+                      </div>
+                    }
+                    @if (msg.ambiguous && last) {
+                      <div class="action ambiguous">
+                        <br />
+                        <span>
+                          <p-button (onClick)="askNewQuestion()">New Question</p-button>
+                        </span>
+                        <p-button (onClick)="setWorkflowStepDisambiguate(msg)">View Options</p-button>
+                      </div>
+                    }
+                  }
+                </label>
               </div>
-            </ng-container>
-
-            <ng-container *ngIf="!msg.loading">
-              <div
-                *ngIf="msg.reasoning"
-                class="reasoning-toggle"
-                pTooltip
-                [pTooltip]="msg.reasoning"
-                tooltipPosition="top"
-                tooltipStyleClass="reasoning-tooltip">
-                <fa-icon [icon]="reasoningIcon"></fa-icon>
-                <span>Reasoning</span>
-              </div>
-
-              <span class="markdown-content" [innerHTML]="msg.renderedHtml"></span>
-
-              <div class="action mappable-actions" *ngIf="msg.mappable">
-                <p-button (onClick)="mapIt(msg)">
-                  <fa-icon [icon]="mapIcon"></fa-icon>
-                  View on Map
-                </p-button>
-
-                <p-button
-                  *ngIf="msg.savedQueryIndex as savedIndex"
-                  severity="secondary"
-                  (onClick)="saveOrScrollQuery($event, msg)">
-                  <fa-icon [icon]="saveQueryIcon"></fa-icon>
-                  <span>Saved Query #{{ savedIndex }}</span>
-                </p-button>
-              </div>
-
-              <div class="action ambiguous" *ngIf="msg.ambiguous && last">
-                <br />
-
-                <span>
-                  <p-button (onClick)="askNewQuestion()">New Question</p-button>
-                </span>
-
-                <p-button (onClick)="setWorkflowStepDisambiguate(msg)">View Options</p-button>
-              </div>
-            </ng-container>
-          </label>
+            }
+          </ng-container>
         </div>
-      </ng-container>
-    </div>
+      }
 
-    <div class="input-container">
-      <p-button
-        severity="secondary"
-        pTooltip="Erase conversation"
-        (onClick)="clear()">
-        <fa-icon [icon]="icon"></fa-icon>
-      </p-button>
+      <div class="input-container">
+        <p-button
+          severity="secondary"
+          pTooltip="Erase conversation"
+          (onClick)="clear()">
+          <fa-icon [icon]="icon"></fa-icon>
+        </p-button>
 
-      <textarea
-        #messageInput
-        [(ngModel)]="message"
-        rows="1"
-        placeholder="Type a message..."
-        (input)="resizeMessageInput(messageInput)"
-        (keydown)="onMessageKeydown($event)">
-      </textarea>
+        <textarea
+          #messageInput
+          [(ngModel)]="message"
+          rows="1"
+          placeholder="Type a message..."
+          (input)="resizeMessageInput(messageInput)"
+          (keydown)="onMessageKeydown($event)">
+        </textarea>
 
-      <p-button
-        class="btn btn-primary"
-        [disabled]="loading"
-        (onClick)="sendMessage()">
-        Send
-      </p-button>
-    </div>
-  </main>
-</div>
+        <p-button
+          class="btn btn-primary"
+          [disabled]="loading"
+          (onClick)="sendMessage()">
+          Send
+        </p-button>
+      </div>
+    </main>
+  </div>
 
 </div>

@@ -1,170 +1,230 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Geospatial Knowledge Portal</title>
-  <meta name="description" content="Choose between Kaleidoscope, a Geo-AI chat explorer, and GeoPrism Registry, a geospatial data builder.">
-  <style>
-    :root {
-      --bg: #f5f7fa;
-      --surface: #ffffff;
-      --text: #1b2330;
-      --muted: #5a6677;
-      --border: #dde3ea;
-      --accent-chat: #2f6fdf;
-      --accent-gpr: #1f8a5b;
-      --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 16px rgba(16, 24, 40, .06);
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0f141b;
-        --surface: #171e27;
-        --text: #e6ebf1;
-        --muted: #9aa6b5;
-        --border: #2a3441;
-        --accent-chat: #6b9cf5;
-        --accent-gpr: #4cc38f;
-        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
-      }
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    main {
-      width: 100%;
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 64px 16px 32px;
-      flex: 1;
-    }
-    header { max-width: 680px; margin-bottom: 40px; }
-    h1 { font-size: clamp(1.75rem, 4vw, 2.4rem); line-height: 1.2; margin: 0 0 12px; letter-spacing: -.01em; }
-    .lede { color: var(--muted); font-size: 1.1rem; margin: 0; }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geoprism Registry &amp; Kaleidoscope</title>
+<meta name="description" content="Build and publish authoritative geospatial data in Geoprism Registry, then ask questions of it in plain language with Kaleidoscope.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#edf1ef; --panel:#f7f9f8; --ink:#16242c; --muted:#4f5f67; --rule:#c9d3cf;
+  --contour:#9fb1aa; --contour-major:#7f958d;
+  --kal:#23698f; --gpr:#5b4a74; --water:#3f8fc2; --levee:#7a5c32; --on-accent:#ffffff;
+  --node:#ffffff;
+  --font:"Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#11191d; --panel:#172126; --ink:#e2e9e6; --muted:#9dadb3; --rule:#2c3a3f;
+    --contour:#2c3b3d; --contour-major:#3d5052;
+    --kal:#6fb2d8; --gpr:#b7a6d4; --water:#5aa6d6; --levee:#c9a36b; --on-accent:#0e1518; --node:#172126;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:400 1.0625rem/1.6 var(--font);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1160px;margin:0 auto;padding:0 28px}
 
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-    }
-    .card {
-      --accent: var(--accent-chat);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-top: 4px solid var(--accent);
-      border-radius: 12px;
-      padding: 28px 24px 24px;
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-    }
-    .card.gpr { --accent: var(--accent-gpr); }
-    .eyebrow {
-      font-size: .78rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--accent);
-      margin: 0 0 6px;
-    }
-    .card h2 { margin: 0 0 10px; font-size: 1.45rem; }
-    .card p { margin: 0 0 14px; color: var(--muted); }
-    .card ul { margin: 0 0 24px; padding-left: 1.1em; color: var(--text); }
-    .card li { margin: 4px 0; }
-    .actions { margin-top: auto; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    .btn {
-      display: inline-block;
-      background: var(--accent);
-      color: #fff;
-      text-decoration: none;
-      font-weight: 600;
-      padding: 10px 18px;
-      border-radius: 8px;
-      transition: filter .15s ease, transform .15s ease;
-    }
-    @media (prefers-color-scheme: dark) { .btn { color: #0f141b; } }
-    .btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
-    .btn:focus-visible, .link:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
-    .link { color: var(--accent); font-weight: 500; text-decoration: none; }
-    .link:hover { text-decoration: underline; }
+/* Top bar */
+.top{display:flex;justify-content:space-between;align-items:center;padding:16px 0;font-size:.95rem}
+.top .site{font-weight:700;letter-spacing:-.01em}
+.top a{color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink);text-decoration:underline}
 
-    .help {
-      margin-top: 40px;
-      padding: 20px 24px;
-      border: 1px dashed var(--border);
-      border-radius: 12px;
-      color: var(--muted);
-    }
-    .help strong { color: var(--text); }
+/* Intro */
+.intro{padding:40px 0 0;max-width:1040px}
+h1{font-weight:800;font-size:clamp(2rem,4.4vw,3.2rem);line-height:1.06;letter-spacing:-.035em;margin:0 0 16px}
+.lede{font-size:clamp(1.05rem,1.5vw,1.2rem);color:var(--muted);max-width:54em;margin:0}
 
-    footer {
-      text-align: center;
-      color: var(--muted);
-      font-size: .85rem;
-      padding: 24px 16px 32px;
-    }
-  </style>
+/* Map */
+.map{margin:24px 0 40px;position:relative}
+.map .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.map svg{display:block;width:100%;min-width:720px;height:auto}
+.contour{fill:none;stroke:var(--contour);stroke-width:.7;opacity:.45}
+.watershed{fill:none;stroke:var(--muted);stroke-width:1.4;stroke-dasharray:10 5 2 5;opacity:.7}
+.floodplain{fill:var(--water);opacity:.14}
+.project{fill:url(#hatch);stroke:var(--gpr);stroke-width:1.2;opacity:.8}
+.hatch-line{stroke:var(--gpr);stroke-width:1;opacity:.35}
+.river{fill:none;stroke:var(--water);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.trib{fill:none;stroke:var(--water);stroke-width:2.5;stroke-linecap:round}
+.levee{fill:none;stroke:var(--levee);stroke-width:4;stroke-linecap:round}
+.edge{fill:none;stroke:var(--gpr);stroke-width:1.6;stroke-dasharray:5 4}
+.edge-label{font:600 13px var(--font);fill:var(--gpr);paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+.node circle,.node path{fill:var(--node);stroke:var(--ink);stroke-width:2.2}
+.node text{font:700 15px var(--font);fill:var(--ink);paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+.node text.src{font:500 12.5px var(--font);fill:var(--muted)}
+.q{font:500 14px var(--font)}
+.q-bubble{fill:var(--kal)}
+.q-text{fill:var(--on-accent)}
+.q-src{font:600 13px var(--font);fill:var(--kal);paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+.map figcaption{font-size:.9rem;color:var(--muted);margin-top:10px;max-width:60em}
+
+@media (prefers-reduced-motion:no-preference){
+  .edge,.edge-label{animation:fadein .5s ease both}
+  .e0{animation-delay:.5s}.e1{animation-delay:.7s}.e2{animation-delay:.9s}.e3{animation-delay:1.1s}.e4{animation-delay:1.3s}
+  .ask{animation:rise .6s 1.8s ease both}
+  @keyframes fadein{from{opacity:0}}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}}
+}
+
+/* Doors */
+.doors{display:grid;grid-template-columns:1fr 1fr;margin:8px 0 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.door{padding:26px 40px 36px 0;display:flex;flex-direction:column}
+.door + .door{padding:26px 0 36px 40px;border-left:1px solid var(--rule)}
+.door .role{font-size:1rem;font-weight:600;margin:0 0 6px}
+.door.kal .role{color:var(--kal)} .door.gpr .role{color:var(--gpr)}
+.door h2{display:flex;align-items:center;gap:14px;min-height:1.6em}
+.door h2.with-icon img{width:1.6em;height:1.6em;flex:none}
+.door h2.with-icon img.wide{width:auto;height:1.45em}
+.door h2{font-size:clamp(1.7rem,3vw,2.3rem);font-weight:800;letter-spacing:-.025em;line-height:1.1;margin:0 0 12px}
+.door p{margin:0 0 20px;color:var(--muted);max-width:34em}
+.door ul{margin:0 0 30px;padding:0;list-style:none;max-width:34em}
+.door li{padding:9px 0;border-top:1px solid var(--rule)}
+.door li:last-child{border-bottom:1px solid var(--rule)}
+.actions{margin-top:auto;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.btn{display:inline-flex;align-items:center;gap:9px;text-decoration:none;font-weight:700;padding:13px 22px;border-radius:6px;color:var(--on-accent)}
+.kal .btn{background:var(--kal)} .gpr .btn{background:var(--gpr)}
+.btn:hover{filter:brightness(1.1)}
+.btn-icon{width:15px;height:15px;flex:none}
+.link{font-weight:600;text-underline-offset:3px}
+.gpr .link{color:var(--gpr)} .kal .link{color:var(--kal)}
+.btn:focus-visible,.link:focus-visible,.top a:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+
+/* Flow */
+.flow{margin:24px 0 0;padding:48px 0 56px;border-top:1px solid var(--rule)}
+.flow h2{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:0 0 24px}
+.flow > p{color:var(--muted);margin:0 0 32px;max-width:44em}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;list-style:none;margin:0;padding:0;counter-reset:s}
+.steps li{counter-increment:s;padding:18px 24px 0 0;border-top:4px solid var(--gpr);position:relative}
+.steps li.ask-step{border-top-color:var(--kal);padding-left:24px;margin-left:0}
+.steps li::before{content:counter(s);display:block;font-weight:800;font-size:2rem;line-height:1;margin-bottom:10px;color:var(--gpr)}
+.steps li.ask-step::before{color:var(--kal)}
+.steps h3{margin:0 0 6px;font-size:1.1rem}
+.steps p{margin:0;color:var(--muted);font-size:.98rem}
+.owners{display:grid;grid-template-columns:3fr 1fr;margin-top:18px;font-size:.9rem;font-weight:600}
+.owners span:first-child{color:var(--gpr)} .owners span:last-child{color:var(--kal);padding-left:24px}
+
+/* Context */
+.context{display:grid;grid-template-columns:3fr 2fr;gap:48px;padding:44px 0 52px;border-top:1px solid var(--rule)}
+.context h2{font-size:1.3rem;font-weight:800;letter-spacing:-.015em;margin:0 0 12px;line-height:1.25}
+.context p{margin:0 0 14px;color:var(--muted);max-width:40em}
+.context .now{border-left:4px solid var(--gpr);padding-left:24px}
+@media (max-width:820px){.context{grid-template-columns:1fr;gap:28px;order:6}.context .now{padding-left:18px}}
+footer{border-top:1px solid var(--rule);padding:22px 0 36px;color:var(--muted);font-size:.9rem}
+
+@media (max-width:820px){
+  .doors{grid-template-columns:1fr}
+  .door,.door + .door{padding:32px 0 36px;border-left:0}
+  .door + .door{border-top:1px solid var(--rule)}
+  .steps{grid-template-columns:1fr 1fr;row-gap:28px}
+  .steps li.ask-step{padding-left:0}
+  .owners{display:none}
+  .wrap{display:flex;flex-direction:column}
+  .top{order:1}.doors{order:2;margin-top:8px}.intro{order:3}.map{order:4;margin-top:8px}.flow{order:5}footer{order:7}
+}
+@media (max-width:520px){
+  .wrap{padding:0 18px}
+  .steps{grid-template-columns:1fr}
+  .intro{padding-top:32px}
+}
+</style>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>Geospatial Knowledge Portal</h1>
-      <p class="lede">
-        This site hosts two connected tools. One helps you <strong>ask questions</strong> of geospatial
-        knowledge using AI; the other helps you <strong>build and manage</strong> the authoritative
-        geospatial data behind it. Pick the one that fits what you're trying to do.
-      </p>
-    </header>
+<div class="wrap">
+  <header class="top">
+    <span class="site">Geospatial Knowledge Infrastructure</span>
+  </header>
 
-    <section class="cards" aria-label="Applications">
-      <article class="card chat">
-        <p class="eyebrow">Explore &amp; ask</p>
-        <h2>Kaleidoscope</h2>
-        <p>A Geo-AI explorer for chatting with the geospatial knowledge graph in plain language.</p>
-        <ul>
-          <li>Ask questions about places, features, and how they relate</li>
-          <li>See answers on a map alongside the conversation</li>
-          <li>Discover data without knowing the underlying schema</li>
-        </ul>
-        <div class="actions">
-          <a class="btn" href="/chat/">Open Kaleidoscope</a>
-        </div>
-      </article>
+  <section class="doors" aria-label="Choose an application">
+    <article class="door gpr">
+      <p class="role">Build and publish the data</p>
+      <h2 class="with-icon"><img src="data:image/png;base64,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" alt="" width="56" height="56">Geoprism Registry</h2>
+      <p>Where USACE staff combine datasets, define how features relate to one another and publish the result to Kaleidoscope as a spatial knowledge graph (SKG).</p>
+      <ul>
+        <li>Define feature types, such as levees, floodplains and facilities, and the relationships between them</li>
+        <li>Import and validate data from many sources, with changes tracked over time</li>
+        <li>Publish versioned, standards-based linked data to Kaleidoscope and other systems</li>
+      </ul>
+      <div class="actions">
+        <a class="btn" href="https://gki.sec.usace.army.mil/gpr">Open Geoprism Registry<svg class="btn-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M9 2.5h4.5V7M13.5 2.5 7 9M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a class="link" href="https://docs.geoprismregistry.com/version/v2.0.0" target="_blank" rel="noopener">Read the documentation</a>
+      </div>
+    </article>
 
-      <article class="card gpr">
-        <p class="eyebrow">Build &amp; manage</p>
-        <h2>GeoPrism Registry</h2>
-        <p>A data builder for creating, curating, and publishing authoritative geospatial master data.</p>
-        <ul>
-          <li>Define geo-object types and hierarchies</li>
-          <li>Import, edit, and validate geographic data over time</li>
-          <li>Publish versioned lists and share data with other systems</li>
-        </ul>
-        <div class="actions">
-          <a class="btn" href="/gpr/">Open GeoPrism Registry</a>
-          <a class="link" href="https://geoprismregistry.com/" target="_blank" rel="noopener">Documentation ↗</a>
-        </div>
-      </article>
-    </section>
+    <article class="door kal">
+      <p class="role">Assess sites</p>
+      <h2 class="with-icon"><img class="wide" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJIAAABwCAYAAAD19ykHAAAX00lEQVR42u1deZRcZZX/3e+9V3v1voQJaSCEAJkEOHLOOEd0QFQQDgIHExSEmBhlCbvKGNFhFTAiMIyyjSMqclAWR9ADGRBZZNGoLEkgsgQCCel0p5Neq6qr6r3vu/PH96pr7yXdlVRXv3tOn0pSX16/d9/vu9/v3u/e+xHKCGOJQXhIAsCWfQ+fzYSTAP40Ew5nYB8FhAkgeFIzwgALIA5guyBeDyX+kFLqsfnbNnxYiIlCoRIXI/cL3jT7iIP8Bl/G4MU+IVqJgTQYkhnK03tNigBgEMEHAhOQVqoHoN/EHL51Qef6t3PxURZIDAiCxsgHcw5bZQj6bkiIcEwp2MyKAHbHeJaoxi0TXKBYRCIiBOJKJhTwvf0+WH9jIVYyAAQAXOV+8ULzwdEtHYc/Wm+YN9rM4T7HcWxmpgxYPRDVvBBApPEgbGbucxzHYYTqhXnD1o7DH32h+eAoAeqqHPyI3OXs9QULIh0h/5qoME7epWxbAUxEpgeeGQ4qIlMBvEvadkQYJ88J+f+ve8GCSC52hP7DEnE1wMEh49dRwzyqV9k2gSwPQJ7kWymyepVt1xnmx+JDxq+uBRSwRDBAlGHib89ZuKrd9N24U2oQlb8iAUKACAV0y5NaQQwzAKXcP5TiUGw3C8vaqexV87ZsWM1YYhADtKVj0QEEsZHBpjMamTYMcCoNTiT0LyLywFRDANIoYcA0IMJhwDQBKUuScRNQAmRL8IL9tqx/3ySA3wW+1SSEv1c5DmlbU2yFAKjePphzZiN4ygnwHTofIhL2XkBNuWsKsm8AqXVvIPniWsi+foiGOkCqomXOAXOTMAK9yvkWAefRxo5D9vGztdESot5mRpE1IgIUg5NJ1K9cgYaVX4HR1uIpvcbF3rQZvatvQ+w3v4eor9MrUIFVsohgKzUghDzU+Ebd7C+FDbE4yYoJJEpZIx5OovW2G9Fw0VchwiFPyzNAjKZGRE7+LDiZxvBzL4BCoTzORABJMIcNI2gz3jEBdTzYYAJxKU6kevvQcNlKRM84DWw7INPA0P0PI/74U1BDMXisu7ZIktHajOjppyJ03CfBjoPmqy5HeuNbSPzxWYi6aN4yRyAmBjPjs/Rex2GbLKID0zroSHmWyHFgNDZgzvOPQdRFwUqh56JVGPzFr0ChIIgE2ANRbYFJSsBx0HztKjRcej7AjNSrG7DtxC+AAv48q8QA+4gozfyuyeB9pA4m5XMjIcDxBIKnngjRUA8AiD3wCAZ/8WuYs/cBS+0eeoGmGhMhACmx6/pbEDzm4/AfsQj+wxfCt/AQpDds1Eucy5cIIMkMAs8yAQqqMuEiKAXfIQdpFBIh/tiToGBAg0hKT+m1KEqBLBNI20g88TT8RywCDAHfvLlIvbwOFM43HQoAg0JjbsBSMJh1/+NxN3bkLWe1DSZtOGT/YA4OAmXfO6GUlzauqJUnM4Myjf99C09bnkwJtfJU4IkHJE+qRszKwnQUGlZqd9nNLJjU2HLjq4l3TOS+hSjNVZiLti1GvXap8dMCSO7WCqfSpb8OBUGWlVUcETiVKjmeAn6Qz5c/Nm2Dk8nS1y4cX0Ug4nQaPFzmvoOB4udMDIPTJXRimfnbFkSA40Alhktf2zK1B14hnZiVVJhv4QIdhxqZaQxIBQaQemUdnO3dGkyAHj9/HqyD5uakqDAgBNL/eBv25i0gX2asDatjNnwLD82Ozcw6IZDe+Bbs97fq8dUCJhf81n5z4Fu0QP+TYWRBQITUK+tgf/Bh3nP6j1gIa/8OMLMezwwYAk5nF5J/fSWrP8eB0dSI0PHHFlsiIeBs247UujcqppOKAIkMARWLI3r6qag/Z2nJMTvO+zqGHngE1OjXCQaxOMInn4DGb6wsGtt7zWr03XwnRGsTmAGOxxH8+L+i5YfXlrz2ru9ej/4f/QQi0ASuksApCQEVjyN0zFFovvHKkmN2fvNKpDe+BQo0gaDjdnXLz0T0i6cVjR3+00voPPVskN+n9yqGk7Dmz0X7T/+r5LVjjz6O7qUrQYGmigSTK7u0pVKAlGBHgkx39kk9o9h28td+14pBKrDU41lKkDDAabt4rG3rDUQlAXdmj4y37QnFQPaoVXLvm6UEGS6fkfoZiu6bCJxM6fGOBJkiOzaeKBoLR2atv/vdiE6GUxXViVlpxcEwdHJAxoxDAUYZAkmkv3PNccaMjzoWnCWYo42vJrKdue8Rnbj6GUsnmfGGUZpUZ8h2DpBGdCIqqxNzrylUCG2lDEMHzMspp3AsjzF2WgdjhH62XMCUmxREVaWTvQYkNRSD3NkLIRVIEFRfH3i4tMfB8Thkb69b3klQvX3atNeYcDwB1devJw4A1ddf1uvldFrrz3EAENTgkM4PmzFAcmdY+MTPwGxrASwLkBKqtw9+15sZmYXuZ/Doo8BpBxTwgR0J1TeAwEePzB87ncV9hsC/fAQqFgdFwiAQVCwGa97+JXVizd0fDRefoxP0HQdqKAbroANrFEglA2xaEXVnnw6cfXpZry/j6QBA+OQTED75hPLLQaG7W83ZCUTFgUH3GepWnIW6FWeNqpPMWN+Cg9F66/WjAjP7HngaA4kZFAqWTztRCqw4/5nLRXFLjS0VxVUMGFSdwciMWhxH37dt55PtvIk3Uhs0amSbpRqHThRgGRWfYKIyGGKQ34fkC2s1oDKBtHIEOvNTbpkqNbZQYVKCLBPOh51IPPUcKBwC5878jAdpjHGdXC+q1E+pexQi++MGFwvHsVIQ9VHEfvs44k88rQOJjlOGbAv3Z5xke1SdWLA3bUbfD28HRcIV2yapjEWSChSNIPbIY6CAH2133KRnmeLKuKFubMX5sBPbFy9DetNmiGgkqzQisO3ows4iDRgQoVDRbFf9AyVnsAiHNC/JfKcYKh4DZaxBpv0C622JPDecBDidRvfyizDrF7cj9JljNJhMs2I6sd/djO2Ll8HZtn0aAskFk9HciKH7HwZLifa7btaKVmpq3dRSIKqvy852IcCJYfgOW4DGC78KdrP/wAwSAun33kffTT/SyyEAlg5EJIK2718JCodylhr9//pv+jHS726GCAahkkmY/7QP2n9wNciyQKYJmAbINKHicew475uQ/f36392lhXw+wHbQvfwCtN97F0LHfgLsOHrMVINo02Z0Ll4G2dkFURcBO5WL8leUbLMjYbS2IPbAbwFHou0nt2aVOhXellIaRFu3YfuS5cUgylijdBpWx74In3Ji0SWsf7yNvtW35bwEhggEED1zcclfOXjP/cCb7wAhTZpFNILQsZ8ofnYpS+9rKQVYJmDb6F66ErPuuwvBY47SUXpDTJlOckFE0XBFQVQxjlRILo22FsR+8zt0r7gYKp6YGuKnNBG1t3yI7UuWwy4Folx+5Eg9U20771MNFsReXHyr/oGR0pyiz9xJkHtNxy2KUAoci5d/RqUAnwVmRtfS8zH8p5c0iEZbdhTrfUMp9Wepsa61t995F9uXZEAU0c9e6VjqHvFUbAdGeytiDz6K3mtvcpe4SQCJdf2UiifQvewCpN9+V9eolwJR5r9QOQJdQJCJwBmLOSbZJl3VN0KSKZ94j8Uj/RZYSnQtuxD2u5tHyuNLvynSToth6M9SYQ8iqP4BdJ29EvbWThdETm0FJFkqUDgEp7Mrb+aPGXsS5ffaOJGAs207RGQcpptHAaUjs7NWKp0XZdsY1wWl1KEJYzedkkAAPDAIub0b1oEHuJaGigBiv/Mekq9tgAj4oZIpWB376qBsBvSswaYGh+B07dBOwR7MfNizkW2lRvJnytvICRhJIpBl6e2Ssf5fuWXGMEDRMMgf0JdU2mXmtD2O3+8CfzKekHK5URmyzVKBTAPxNU+h55JVMGa1Q3b3IPqlxZj10SNHYmd5oRLL1El/hlGjQBrthbrr+8D//BLJF9ZC1EUgBwYR/eLnET7hU1qhpcjoeLgWUfHsdIHnX3QoOv78ZJHVM5ob86PE7mfbHTdBDSdBQuh4mWWOJKLtds2f4vyYV6lH8PshGhshGup1D4ZweOI6rikgjfHwyZfWYvDeX8Noa4Hs3gH/on9G+IRPTUI5POJFlXxBlgWjvXX8CuvYt8ITjMt/75JtlCPbe1FMVJlQOAzR1AjR2ABO26CgfwoumrsE0fhmcLnwhOLil12uYGEqLPU0kaoDEpQqmHmTVDC7SMoky0kJwBgfaMp4T2NWHCul9xknwvemOZBqv65NKYhwEMm/v4bEH57VBLSCLjFLCQiB4ef/DLmjJxuAHRXr7AFpWoi7x9W17AINJjeHZ8rF3eoYfu5FdC+7MBuPGo/V9IA0DcTd4yKifDBNJWFVCjBNDD/7IrrOOk97mdYESn88IE2fJQ6WlQXTE89kN5Gn4tpCIPH08+haer4OUPqtCV17uncKmlm1/0oBbtLbjgsvh+zumfx2TQ5Z71t9GzgW1y3y5Mzy2mZeEwk32YttB2okP2lqXiJZ1m4umR7ZnqacqTJWgCeT1eABaTp6ccjGq6aY1O/WvYzHaxPZ1Foyq6+uz6zOF10673nSYwteOktVufse7/1kxo4VaxpO6do+04Tc2QsVi3lAGnNWZ7YzxtPnyHGyMaGJWIQKdOal3P0wpdwllItZWO5flND3X4ZXZUqyQscdg/af3aG7CieTsObuP2KpPCCVvCNT5z+7P6OmQhCBohEI5vyE/HFYgbHzjXYDSD4fKBDQfYjcHG8qZaFy/y4Iighctlxdj/MdOh++Q+eX9Rg9IGXEBUzzVf+Oxm9cCDIEWEoYjQ1aX6ZRpDyjsQGz1zzotvOdgPPljhXutSfNNzIpJv99i85jMowsgEQukMi1MpRP0B2pj2fI0UNx6EKnmmRWQRJUVTyp6iyS0dwEo7lpnK6CgNHSXD333tZauYsLAgljZB5U3UJSlRypoARoVPM9Gbd5rGUhcy+ZPbPxZGHybr7pad7DoPqAlAcc2jsvIEP4S1W6urv7ZXsZzdCe9iY8KQaRW0HCw0mk394E2bML1v5zYM2bm+UwU13o6QGphsQFB6dt9N/+Uwzd/zCcbZ3gtA0RDsGaNxd1Z34edcvO0IDywJSlcJ4K8kHkbNuOzlO+hF3/cQOcbZ0gn0/3EQCQfv0f6LnsO9j2uTNhv/eBm3GpPN1VJZAmGpCcShB1dmH7aUuR/MvfYc5qy7bHyZxPFgrCaGtBcu3f0fm5M5Ba/4YuJRoPmFTBc00HvUxrIBEVt4mpNHCh2wt3f+UipN95D0Zzkw5YlqjbZ9uB0dAAuXMXus74Guz3t4xdbu267+Ouwq0GvUxbjuSS3F3X/ACpV9ZBRCJQA4No+PpK3bFDqZHtgpLiNmFIvrgWPZdfrbtvxBOwFsxH+923jm6NDAO7rlmN4RfXwmxvGzPqzY7uWOJ070D31y7F7N/d7/a7Lkitdf/OaRs9l3wbTncPyO8Dp9Jo+f6V8M0/cGye5X7fd/PtGH7mBYiGOqi+AdSfsxThU04sX+8304GUenkd4k8+DaOpAXLHTkS+cNo440X6ezUwhNRrG2A01UMNxEbvPeS2f0k88zwGfnIvjNbmcW+dsOPAaKhH8i8vo/eGW9B83RUj1ysFhuQLf0H6/a2gkB+cSEKtunRCFjO9fiPiTzyt6/26uhE6/pOTj6PV8tJG4RBEfR1EXRSivj5bxTruqWGAwiFQKKQ/y9XFZaxFMoXeq1aDTGvC+W1sOzBamjBw98+RXPuyBlEZvkSRCER91H2uKGBOrJyaQkFXLxFXLz6PI41JfKXM7s5PdMYVklI1eon40H0PIfXaBojd7Wbmbn71XvdDfb+jNceQOT8Tfa7J6sVz/yu0jAoBFU+g/+6fgcLh3T+zREqIaBTDL65F/PGncoowPfe/9nHknqgUe/h3sN95DyIUmNQM180kLPTfcY/mWDMwSDkjgUSuZzX8zPM6kj3ZVUIpUDCA9BtvwtnaWbqXtgekmkbU1C6XmcNnqsD7rW0gZRK9Kvw78pLk92CzqVFBZIyzp/hkxTCyJ2vuQUDtOSC5JLTcMZxT9i7dw15Ub5/+7B+oDmd0YBCqrx+qf0AfXDPVvQeEXk7NWW1oXHVJ9oCbPQSmPROQNASQTEJEI/qsDa6MJQLcw14uOx8iFAQnUzDnzN77KDIEwid+Bs7OnSCfBU7Z2SzQqXzRbtVwwwVf1bsEV3wvm05c4SXX3BNK5JQNEoRZv7wTwWM+Xpn0i9zDXsocUbq3OBhZFlpuurryPM21TOxINKxcASLCzm9ft0fAVOHj2gWQskFCYNZ9d+rjssbqcr87tWEFPCVz2MsI79yTPGkUzy4vhXiiG6+Fehnlv5JpAI5E/flfATJgaqjDSMOxaQUkt+M+kdCW6OijRvoHjSqOo49it21dkTFRNzpDtlFlWa+TtcCFehkrdcU0wI5E/XnLARLYueoaiGjUPSdlmpyynYmjkGGg/ec/1kckjPPwFtFQD7O9FaKhDkQCFAzAE0DU12m9NDeCWO+9jfkaMpbp3C8DBOy6enXF9ujMSs0+NTiE1luvR+jYf9NHLIyzv3brbTdmj2lgdosNobvdz0TJ1PtddwWarrw8q5dAIAuWMSwTlEL9OV9G7IFHkNqwUR/WM8UB0wotbZqcWAd0TJhYi3DIMz+lrEsoCEJwtye2fg/T9Lh2Hk5OfBOzcP0m8lA0FXqp8P5fhYCkPRPerTYvexA4uemrkyWgmfbLFQ4lVKtU8ExbVH2FBafS4HgC7LMmn/qRAdJ0bwZZlXEkVd15Odb+c+A/YqE+jmrSoNdHjZLf5wFpqtd0rlaL5C5Bzdd/F80V/h0ekKZCHEefoyZlZfbXqpB2VPXKNi23SNwYEJnGhBPdp7WbXtVmw5hmWyRKn4w49MD/IrXu9WwHD0/2qsiuHsBnTaMtEmZQwI/Emj8i/uga7w1WCzWMRid2rEXVLG2RMISIeG+wWiiSVNNw999d4thr1jEzrJ2nAk88IHniAckTD0ieeOIByZNqANJequL0ZC/JBEIFgsfYBeNYfOSCRmN9xTPtPKkG86LTeXNPVVDxRFkjwoAyAcQFEFGlwGgIpF5/c+QCkdNOwtBDj+r9JNPcvcQ1T6paSBA4mQaFQ4icdJwGgpSw396Ubc5asKRJIGESuNMkMT/FzHnVUkpBhMMY/tOLkN09MFpbED7peDRethL9t92tq2e9Za72REqQ34+Wm6+DdfA8AEDyr68gvfGtoqIBBtgkIsWq01TAaxbooLSOQRt5JsmyIHfsRO/3/xOtt14Pdhw0X/dtBI/+GOJrnoIaHHQx6Vmm6W+K9Gs02tsQXfw5+I9Y5HagI+y6/hb3FecfQUWAsohEivGqKRiPM+F0BhOh+NwN0VCPwXsfgHXAfmi4+BwAQOjTRyP06aM95dc8VxLoufQKJF/6G0RTPeDIAm7ExAxixhrj3EjTh4pouU+IsNQoo0KyRH4/Ek8+A+eDLbDmzYXR0uQpuca9teTfXsWOi1ch/uga3TtAFoII7CNBSaV2pqV9CQHApo5FNzcL6+u9ynYIZJZDpxoYhKivQ+DIw2HNn6cbeHpSU6L6B5B6402kXl2vz2Cpi5YsjGCw0ywss1fZN8/dsuGbxAB90HHkLIL9JoEiNrh8iwLDABwHKjGsq2E9r60GuRKBfBYoFNJhgBJ59wywBWIGxxjpQ/bb8mYXMZYYhIfkpjkLz202rLv6lGMDZI32i7JntXp6r8FVLe/8lTKj7EZhWbtk+rx5W1+/W2MIQBZMi+5tNayzdyrbptHA5MnMBRrYbhGW1SPtX87bumFpBjvuFslD6kHA6G/zrehV9u9bDMtisKM8v96TDHfSBWZOi7CsPmX/vn+rb8WDgAE8pDKBgcy6RwDwLGDM3W/RXREyV8RZwVbKISIBb4N3hlogMJilJYQZJoEh6dyzeWvTucfgOekCiPOAlAsmAnjzfocvtxg3hIWYlWCFJDMDrPLOHfeklvHDAIkAEYVIIK5Ul038nQM+WH9PLk5GqHOJK5BLqdVr7Ye1NflxPhHOItA8HxEcBiS47BEfnkxvEQQYIJgE2MxQjE0Eui+ZUnfO616/g92tDCqgPVQekppEAcBr7YeFW/z4JDMd54A/wsAcEELecleDVIiRIGCrAL1igP/Qn3SeWdizMVaIiUL5f3KxNPLcLYNFAAAAAElFTkSuQmCC" alt="" width="73" height="56">Kaleidoscope</h2>
+      <p>An AI-driven virtual assistant for asking questions of published data in plain language, with answers on a map. USACE staff use it to assess sites for flood risk reduction. Kaleidoscope continues to evolve as more data is integrated and new use cases are added.</p>
+      <ul>
+        <li>Ask what is in the floodplain, what a levee protects, or what lies within a project area</li>
+        <li>Get answers grounded in authoritative, linked data rather than guesswork</li>
+        <li>Trace each answer back to the datasets behind it</li>
+      </ul>
+      <div class="actions">
+        <a class="btn" href="https://gki.sec.usace.army.mil/chat">Open Kaleidoscope<svg class="btn-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M9 2.5h4.5V7M13.5 2.5 7 9M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a class="link" href="https://terraframe.github.io/kaleidoscope-documentation/" target="_blank" rel="noopener">Read the documentation</a>
+      </div>
+    </article>
+  </section>
 
-    <aside class="help">
-      <strong>Not sure where to start?</strong>
-      If you want to <em>find answers</em> or explore what's known about a place, use
-      <a class="link" href="/chat/" style="--accent: var(--accent-chat)">Kaleidoscope</a>.
-      If you need to <em>add, change, or maintain</em> the data itself, use
-      <a class="link" href="/gpr/" style="--accent: var(--accent-gpr)">GeoPrism Registry</a>.
-    </aside>
-  </main>
+  <section class="intro">
+    <h1>Integrate data to enable knowledge sharing and AI compatibility</h1>
+    <p class="lede">A geospatial knowledge infrastructure (GKI) connects data from many sources through location and the relationships between real-world features, so knowledge, not just datasets, can be shared across organizations and used directly by AI. Geoprism Registry and Kaleidoscope are the tools within the USACE GKI for combining data, enhancing it for advanced analytics and integrating it with AI. USACE staff build and link the data in Geoprism Registry, then publish it to Kaleidoscope to assess sites for flood risk reduction.</p>
+  </section>
 
-  <footer>
-    Developed by TerraFrame with funding from the U.S. Army Corps of Engineers (USACE).
-  </footer>
+  
+
+  <figure class="map">
+    <div class="scroll"><svg viewBox="0 0 1200 330" role="img" aria-labelledby="map-title">
+      <title id="map-title">A map of part of the Guadalupe River watershed showing the river, a stream gauge, a levee segment, the Upper Guadalupe project area, a floodplain and an elementary school. Dashed lines show how these features relate: the levee protects the school, and the levee is part of the project. A question asked in Kaleidoscope is answered from these relationships.</title>
+      <defs><pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="9" class="hatch-line"/></pattern></defs>
+      <path class="contour" d="M1200,18 L1190,18 L1180,18 L1170,17 L1160,17 L1150,17 L1140,17 L1130,16 L1120,16 L1110,16 L1100,17 L1090,17 L1079,18 L1069,19 L1059,20 L1054,21 L1044,22 L1034,23 L1024,24 L1014,25 L1009,26 L999,27 L989,27 L979,28 L969,28 L959,29 L949,30 L941,30 L934,31 L924,32 L914,34 L904,35 L899,36 L889,38 L879,40 L874,42 L864,44 L856,46 L849,47 L838,50 L833,51 L823,53 L813,55 L807,56 L798,57 L788,58 L778,59 L768,59 L758,59 L748,59 L738,59 L728,59 L718,59 L708,59 L698,59 L688,59 L678,60 L668,61 L663,61 L653,62 L643,63 L633,65 L623,66 L618,67 L608,68 L597,69 L587,70 L577,71 L567,70 L557,70 L547,69 L537,68 L527,66 L522,66 L512,64 L502,63 L492,62 L482,62 L472,61 L462,62 L452,62 L442,63 L432,64 L422,66 L417,67 L407,69 L397,71 L392,72 L382,74 L372,75 L367,76 L356,78 L346,79 L336,80 L326,81 L321,81 L311,82 L301,82 L291,83 L281,84 L271,84 L261,85 L251,86 L246,87 L236,88 L226,90 L216,91 L211,92 L201,94 L192,96 L186,98 L176,101 L171,102 L161,104 L153,107 L146,108 L136,111 L131,112 L121,115 L111,117 L105,118 L95,119 L85,121 L79,122 L70,123 L60,124 L50,126 L42,127 L35,128 L25,129 L15,131 L6,132 L0,133 M634,330 L636,320 L638,314 L639,305 L640,294 L641,284 L640,274 L639,264 L638,258 L636,249 L633,239 L632,234 L638,229 L643,228 L653,227 L663,226 L673,224 L682,223 L688,223 L698,222 L708,222 L718,222 L728,222 L738,222 L748,222 L758,221 L768,221 L778,221 L788,220 L798,219 L803,218 L813,217 L823,215 L831,213 L838,212 L849,209 L854,208 L864,205 L872,203 L879,201 L889,199 L894,198 L904,195 L914,193 L919,192 L929,191 L939,190 L949,189 L959,188 L964,188 L974,187 L984,187 L994,186 L1004,186 L1014,185 L1024,185 L1034,184 L1044,183 L1052,183 L1059,182 L1069,181 L1079,180 L1090,180 L1100,179 L1110,178 L1116,178 L1125,177 L1135,177 L1145,177 L1155,177 L1165,178 L1170,178 L1180,178 L1190,178 L1200,178 M0,293 L10,292 L20,291 L30,290 L40,290 L45,289 L55,288 L65,287 L75,286 L85,285 L94,284 L100,284 L110,282 L121,281 L131,280 L136,279 L146,277 L156,275 L162,274 L171,272 L181,269 L186,268 L196,265 L201,264 L211,261 L217,259 L226,256 L233,254 L241,252 L251,249 L256,248 L266,246 L276,245 L283,244 L291,243 L301,242 L311,241 L321,239 L329,239 L336,238 L346,237 L356,235 L367,234 L372,233 L382,231 L392,229 L397,228 L407,227 L417,225 L424,223 L432,222 L442,221 L452,220 L462,219 L472,219 L473,228 L472,235 L471,244 L471,254 L472,264 L472,269 L473,279 L475,289 L477,298 L477,302 L474,310 L471,315 L467,323 L464,330 M919,0 L909,1 L899,3 L889,5 L884,6 L874,9 L868,10 L859,12 L849,15 L844,16 L833,19 L828,20 L818,23 L808,25 L803,26 L793,27 L783,28 L773,29 L763,30 L753,30 L743,30 L733,30 L723,30 L713,30 L703,30 L693,30 L688,30 L678,31 L668,32 L658,32 L648,33 L638,34 L628,35 L623,36 L613,37 L603,38 L592,38 L582,39 L572,39 L562,38 L552,37 L546,36 L537,34 L527,32 L517,31 L512,30 L502,29 L492,27 L482,27 L472,26 L462,26 L452,26 L442,27 L432,28 L422,29 L414,30 L407,32 L397,34 L388,36 L382,37 L372,39 L364,41 L356,42 L346,44 L336,45 L331,46 L321,47 L311,48 L301,49 L291,51 L286,51 L276,52 L266,54 L256,55 L251,56 L241,57 L231,59 L221,61 L216,62 L206,64 L198,66 L191,68 L181,70 L176,72 L166,74 L159,76 L151,79 L141,81 L136,83 L126,85 L121,86 L110,89 L100,90 L93,91 L85,92 L75,94 L65,95 L55,96 L46,96 L40,97 L30,98 L20,99 L10,100 L0,101 M665,330 L668,320 L669,315 L671,305 L672,294 L673,285 L673,279 L673,269 L672,264 L672,254 L678,253 L688,252 L698,251 L708,250 L718,250 L728,250 L738,251 L748,251 L758,251 L768,251 L778,250 L788,250 L798,249 L803,249 L813,247 L823,246 L833,244 L838,243 L849,241 L859,239 L864,238 L874,236 L883,234 L889,232 L899,230 L906,228 L914,227 L924,225 L934,224 L939,223 L949,222 L959,221 L969,221 L979,220 L989,220 L999,219 L1009,219 L1017,218 L1024,218 L1034,217 L1044,216 L1054,216 L1064,215 L1074,214 L1080,213 L1090,212 L1100,211 L1110,211 L1120,210 L1130,210 L1140,209 L1150,209 L1160,210 L1170,210 L1180,210 L1190,210 L1200,210 M0,326 L5,325 L15,323 L25,322 L35,320 L40,320 L50,318 L60,317 L70,316 L77,315 L85,314 L95,312 L105,311 L115,310 L121,309 L131,308 L141,306 L150,305 L156,304 L166,302 L175,300 L181,298 L191,296 L196,294 L206,292 L216,289 L221,288 L231,285 L236,284 L246,281 L255,279 L261,278 L271,277 L281,276 L291,275 L301,275 L311,274 L316,274 L326,273 L336,273 L346,272 L356,271 L367,270 L375,269 L382,268 L392,267 L402,265 L407,264 L417,262 L427,260 L434,259 L438,259 L440,269 L440,279 L441,289 L442,294 L442,304 L439,310 L436,315 L432,325 L431,330 M396,0 L387,2 L377,4 L371,5 L362,7 L351,9 L346,10 L336,12 L326,13 L316,15 L311,15 L301,17 L291,18 L281,20 L276,20 L266,22 L256,24 L248,25 L241,27 L231,29 L223,30 L216,32 L206,34 L201,36 L191,38 L182,41 L176,42 L166,45 L161,46 L151,49 L146,51 L136,54 L127,56 L121,57 L110,60 L105,61 L95,63 L85,64 L75,65 L65,65 L58,66 L50,66 L40,67 L30,67 L20,68 L10,68 L0,69 M679,0 L673,0 L663,1 L653,2 L643,2 L633,3 L623,4 L613,5 L608,5 L597,6 L587,7 L577,7 L567,7 L557,5 L552,4 L542,2 L532,1 M697,330 L698,325 L700,315 L702,305 L703,300 L705,289 L706,279 L713,278 L723,278 L733,278 L743,279 L753,279 L763,279 L773,279 L783,279 L793,279 L803,278 L813,278 L823,277 L833,276 L844,274 L849,274 L859,272 L869,270 L876,269 L884,268 L894,266 L903,264 L909,263 L919,261 L929,260 L939,259 L944,259 L954,258 L964,257 L974,257 L984,256 L994,256 L1004,255 L1014,255 L1024,254 L1029,254 L1039,253 L1049,252 L1059,250 L1069,249 L1074,248 L1085,247 L1095,246 L1105,245 L1112,244 L1120,243 L1130,242 L1140,241 L1150,241 L1160,241 L1170,241 L1180,240 L1190,240 L1200,240 M168,330 L176,329 L186,326 L193,325 L201,323 L211,321 L216,320 L226,317 L236,315 L241,313 L251,311 L260,310 L266,309 L276,308 L286,308 L296,308 L306,308 L316,308 L326,308 L336,308 L346,308 L356,308 L367,307 L377,306 L387,305 L393,305 L402,303 L408,305 L405,310 L402,319 L400,325 M218,0 L211,2 L201,4 L196,6 L186,8 L180,10 L171,13 L162,15 L156,17 L146,20 L141,22 L131,25 L126,26 L115,29 L108,30 L100,32 L90,34 L80,35 L70,35 L65,36 L55,36 L45,36 L35,37 L25,37 L15,37 L5,37 M729,330 L732,320 L733,313 L738,306 L748,307 L758,307 L768,307 L778,308 L788,308 L798,308 L808,308 L818,308 L828,307 L838,307 L849,306 L859,305 L864,305 L874,303 L884,302 L894,301 L904,300 L909,299 L919,298 L929,297 L939,296 L949,296 L959,295 L969,295 L979,295 L985,294 L994,294 L1004,293 L1014,293 L1024,292 L1034,291 L1044,289 L1049,289 L1059,287 L1069,285 L1074,284 L1085,282 L1095,281 L1101,279 L1110,278 L1120,276 L1130,274 L1135,274 L1145,273 L1155,272 L1165,271 L1175,271 L1185,270 L1195,270 M101,0 L95,1 L85,3 L75,4 L65,5 L55,5 L46,5 L40,5 L35,5 L25,5 L15,5 L5,5 M1014,330 L1019,329 L1029,328 L1039,327 L1049,325 L1054,324 L1064,322 L1074,320 L1079,319 L1090,316 L1096,315 L1105,313 L1115,310 L1120,309 L1130,307 L1140,305 L1145,304 L1155,303 L1165,301 L1175,300 L1183,300 L1190,299 L1200,298"/>
+      <path class="watershed" d="M1260,165 L1267,180 L1270,194 L1268,208 L1259,221 L1245,234 L1224,246 L1198,257 L1167,268 L1134,278 L1099,288 L1063,297 L1026,306 L990,316 L955,325 L919,334 L882,343 L844,351 L804,358 L762,364 L718,370 L671,373 L624,375 L576,375 L529,373 L482,370 L438,364 L396,358 L356,351 L318,343 L281,334 L245,325 L210,316 L174,306 L137,297 L101,288 L66,278 L33,268 L2,257 L-24,246 L-45,234 L-59,221 L-68,208 L-70,194 L-67,180 L-60,165 L-49,150 L-37,136 L-23,122 L-9,109 L4,96 L18,84 L32,73 L48,62 L66,52 L87,42 L113,33 L143,24 L178,14 L216,5 L259,-4 L303,-13 L349,-21 L396,-28 L443,-34 L488,-40 L533,-43 L578,-45 L622,-45 L667,-43 L712,-40 L757,-34 L804,-28 L851,-21 L897,-13 L941,-4 L984,5 L1022,14 L1057,24 L1087,33 L1113,42 L1134,52 L1152,62 L1168,73 L1182,84 L1196,96 L1209,109 L1223,122 L1237,136 L1249,150Z"/>
+      <path class="floodplain" d="M-14,270 L-11,270 L-8,269 L-4,269 L0,268 L5,268 L10,267 L16,267 L22,266 L28,265 L34,264 L41,263 L47,262 L54,261 L61,260 L68,259 L75,258 L82,256 L89,255 L96,254 L103,252 L109,251 L116,250 L122,248 L128,247 L135,245 L141,243 L147,241 L152,240 L158,238 L163,236 L169,234 L174,232 L179,230 L184,228 L189,226 L194,224 L199,222 L203,220 L208,218 L212,216 L217,215 L221,213 L225,211 L230,210 L234,209 L238,207 L242,206 L246,205 L250,204 L255,203 L259,202 L264,201 L268,201 L273,200 L278,199 L282,199 L287,198 L292,198 L297,197 L302,197 L307,196 L312,196 L317,196 L322,195 L327,195 L332,195 L337,194 L342,194 L347,193 L353,193 L358,193 L363,192 L368,191 L373,191 L378,190 L383,190 L388,189 L393,188 L398,188 L402,187 L407,186 L412,186 L416,185 L421,184 L425,184 L429,183 L434,183 L438,182 L442,182 L447,181 L451,181 L455,181 L459,181 L463,180 L467,180 L472,180 L475,180 L479,181 L483,181 L487,181 L492,182 L496,182 L500,183 L504,183 L509,184 L513,185 L517,185 L522,186 L527,187 L531,187 L536,188 L541,189 L546,189 L551,190 L556,191 L561,191 L566,191 L571,192 L577,192 L582,192 L588,192 L593,192 L599,192 L604,192 L609,192 L614,191 L619,191 L624,190 L629,190 L634,189 L639,189 L644,188 L648,188 L653,188 L657,187 L662,187 L666,186 L670,186 L674,186 L678,185 L682,185 L686,185 L690,185 L694,185 L697,185 L701,185 L705,185 L709,186 L713,186 L717,186 L721,186 L726,187 L730,187 L734,187 L739,188 L743,188 L748,189 L752,189 L757,189 L762,189 L767,190 L772,190 L777,190 L782,190 L787,190 L793,190 L798,190 L804,190 L809,189 L814,189 L819,189 L824,188 L830,187 L835,187 L839,186 L844,185 L849,185 L854,184 L859,183 L863,182 L868,182 L873,181 L877,180 L881,179 L886,178 L890,178 L894,177 L899,176 L903,175 L907,175 L911,174 L915,173 L919,173 L923,172 L927,172 L931,171 L936,171 L940,170 L945,170 L949,169 L954,169 L958,168 L963,168 L967,167 L972,167 L977,166 L981,166 L986,165 L991,164 L996,164 L1001,163 L1005,163 L1010,162 L1015,161 L1020,160 L1025,159 L1030,159 L1034,158 L1039,157 L1044,156 L1048,154 L1053,153 L1057,152 L1061,151 L1066,150 L1070,149 L1074,148 L1078,147 L1082,146 L1086,145 L1090,144 L1094,142 L1098,141 L1102,140 L1106,139 L1109,139 L1113,138 L1117,137 L1121,136 L1124,135 L1128,134 L1133,134 L1137,133 L1141,132 L1146,131 L1150,131 L1155,130 L1160,129 L1165,129 L1169,128 L1174,128 L1179,127 L1183,126 L1188,126 L1192,125 L1196,125 L1200,125 L1204,124 L1208,124 L1211,123 L1215,123 L1217,123 L1220,123 L1222,122 L1218,58 L1215,58 L1213,58 L1210,58 L1207,58 L1204,58 L1200,58 L1196,58 L1192,59 L1188,59 L1183,59 L1179,59 L1174,59 L1169,59 L1164,59 L1159,59 L1154,59 L1149,60 L1144,60 L1139,60 L1134,60 L1130,60 L1125,60 L1120,61 L1116,61 L1111,61 L1106,61 L1102,62 L1097,62 L1093,62 L1089,63 L1084,63 L1080,64 L1076,64 L1071,65 L1067,65 L1063,65 L1059,66 L1055,66 L1051,67 L1047,67 L1043,67 L1039,68 L1035,68 L1031,68 L1027,68 L1023,68 L1019,69 L1015,69 L1011,69 L1007,69 L1003,69 L999,68 L995,68 L991,68 L986,68 L982,68 L978,68 L973,67 L969,67 L964,67 L959,67 L955,67 L950,67 L945,66 L940,66 L935,66 L930,66 L925,66 L920,66 L915,66 L910,66 L905,67 L900,67 L895,67 L890,68 L885,68 L880,68 L875,69 L870,70 L865,70 L861,71 L856,71 L851,72 L847,72 L842,73 L838,74 L833,74 L829,75 L825,75 L820,76 L816,76 L812,77 L808,77 L804,78 L800,78 L796,78 L793,78 L789,79 L785,79 L781,79 L777,79 L773,79 L769,79 L765,79 L760,79 L756,79 L751,80 L747,80 L742,80 L737,80 L733,80 L728,80 L723,80 L718,80 L713,81 L708,81 L702,81 L697,82 L692,82 L686,83 L681,84 L675,85 L670,86 L665,87 L660,88 L655,89 L650,90 L645,91 L640,92 L636,94 L631,95 L626,96 L622,97 L618,98 L613,100 L609,101 L605,102 L601,103 L597,104 L593,105 L589,106 L585,106 L581,107 L578,108 L574,108 L570,109 L566,109 L562,110 L558,110 L554,110 L550,110 L546,110 L541,110 L537,110 L533,110 L528,110 L523,110 L519,110 L514,110 L509,110 L504,110 L499,110 L494,110 L489,110 L484,111 L479,111 L474,111 L468,112 L463,112 L458,113 L453,113 L448,114 L444,115 L439,115 L434,116 L429,117 L425,118 L420,119 L415,119 L411,120 L406,121 L402,122 L397,123 L393,123 L388,124 L384,125 L379,125 L375,126 L370,127 L366,127 L361,128 L357,128 L353,128 L348,129 L343,129 L339,129 L334,129 L329,129 L325,129 L320,129 L315,129 L310,129 L305,129 L299,129 L294,129 L289,129 L284,129 L278,129 L273,129 L268,129 L262,129 L256,129 L251,130 L245,130 L240,130 L234,131 L228,132 L222,132 L216,133 L211,134 L205,135 L200,136 L194,138 L189,139 L184,140 L179,141 L174,142 L169,143 L164,144 L159,146 L154,147 L149,148 L144,149 L139,150 L135,150 L130,151 L125,152 L121,152 L116,153 L112,153 L107,154 L101,154 L96,155 L90,155 L84,155 L77,155 L71,156 L64,156 L58,156 L51,156 L44,157 L38,157 L31,157 L25,157 L18,157 L12,158 L7,158 L1,158 L-4,158 L-9,159 L-14,159 L-18,159 L-22,160 L-26,160Z"/>
+      <path class="project" d="M438,214 L442,213 L447,212 L450,212 L454,211 L458,211 L462,211 L466,210 L469,210 L473,210 L476,210 L480,210 L483,210 L487,210 L490,210 L494,210 L498,210 L502,211 L507,211 L511,211 L515,212 L520,212 L525,212 L529,213 L534,213 L539,213 L544,214 L550,214 L555,214 L560,214 L566,214 L572,214 L578,214 L583,214 L589,214 L595,213 L601,212 L606,212 L612,211 L617,210 L622,210 L627,209 L632,208 L637,207 L642,206 L647,205 L651,204 L656,203 L660,203 L664,202 L669,201 L673,201 L677,200 L680,199 L684,199 L688,198 L691,198 L695,198 L698,198 L702,197 L705,197 L709,197 L713,197 L717,197 L721,197 L725,197 L730,197 L734,198 L738,198 L743,198 L747,198 L752,198 L757,198 L762,198 L767,199 L772,199 L777,199 L782,199 L788,199 L793,198 L798,198 L804,198 L809,197 L815,197 L820,197 L825,196 L830,195 L836,195 L841,194 L845,193 L850,193 L855,192 L860,191 L865,191 L869,190 L874,189 L878,189 L883,188 L887,187 L891,187 L896,186 L900,186 L904,185 L889,58 L884,59 L879,59 L874,60 L869,61 L864,61 L859,62 L855,63 L850,63 L845,64 L841,65 L836,65 L832,66 L828,67 L824,67 L819,68 L815,68 L811,69 L807,69 L804,70 L800,70 L796,70 L792,70 L789,70 L785,71 L781,71 L777,71 L773,71 L769,71 L765,70 L761,70 L756,70 L752,70 L747,70 L743,70 L738,70 L733,69 L728,69 L723,69 L718,69 L713,69 L707,69 L702,69 L697,70 L691,70 L685,70 L680,71 L674,71 L668,72 L663,73 L658,73 L652,74 L647,75 L642,76 L637,77 L633,78 L628,78 L623,79 L619,80 L614,81 L610,82 L606,82 L602,83 L598,84 L594,84 L590,85 L587,85 L583,86 L580,86 L577,86 L573,86 L570,86 L566,86 L563,86 L559,86 L555,86 L551,86 L547,86 L543,85 L539,85 L535,85 L530,84 L525,84 L521,84 L516,83 L511,83 L506,83 L501,82 L495,82 L490,82 L484,82 L479,82 L473,82 L467,82 L462,82 L456,83 L451,83 L445,84 L440,84 L435,85 L430,85 L425,86 L420,87Z"/>
+      <path class="trib" d="M548,350 L549,348 L549,346 L550,344 L551,341 L552,339 L554,336 L555,333 L556,329 L557,326 L558,322 L559,319 L560,315 L561,311 L562,308 L562,304 L562,300 L562,296 L561,292 L560,288 L559,284 L558,280 L556,276 L555,271 L553,267 L551,262 L550,258 L549,253 L547,249 L547,244 L546,239 L546,235 L546,230 L547,225 L548,220 L549,215 L551,209 L553,204 L555,198 L558,192 L560,187 L562,181 L565,176 L567,171 L570,166 L572,162 L573,158 L575,155 L576,152"/>
+      <path class="river" d="M-20,215 L-17,215 L-13,214 L-9,214 L-5,214 L0,213 L6,213 L11,212 L17,212 L23,211 L29,211 L36,210 L42,210 L49,209 L56,208 L63,208 L70,207 L76,206 L83,205 L90,204 L96,204 L102,203 L109,202 L114,201 L120,200 L125,199 L131,198 L136,197 L141,195 L146,194 L151,193 L156,191 L161,190 L166,188 L171,187 L176,185 L181,184 L186,182 L191,180 L196,179 L201,178 L206,176 L210,175 L215,173 L220,172 L225,171 L230,170 L235,169 L240,168 L245,167 L250,167 L255,166 L260,165 L265,165 L270,164 L275,164 L280,164 L285,164 L291,163 L296,163 L301,163 L306,163 L311,163 L316,162 L321,162 L326,162 L331,162 L336,162 L341,161 L345,161 L350,161 L355,160 L360,160 L365,160 L370,159 L374,158 L379,158 L384,157 L388,156 L393,156 L397,155 L402,154 L407,154 L411,153 L416,152 L420,152 L425,151 L429,150 L434,150 L438,149 L443,148 L447,148 L452,147 L456,147 L461,147 L465,146 L470,146 L475,146 L479,146 L484,146 L488,146 L493,146 L498,146 L502,146 L507,147 L511,147 L516,147 L520,148 L525,148 L530,148 L534,149 L539,149 L543,149 L548,150 L552,150 L557,150 L562,150 L566,150 L571,150 L575,150 L580,150 L585,150 L589,149 L594,149 L598,148 L603,148 L608,147 L612,146 L617,146 L621,145 L626,144 L630,143 L635,142 L640,141 L644,141 L649,140 L653,139 L658,138 L662,137 L667,137 L672,136 L676,135 L681,135 L685,134 L690,134 L695,134 L699,133 L704,133 L708,133 L713,133 L718,133 L722,133 L727,133 L731,133 L736,134 L740,134 L745,134 L750,134 L754,134 L759,134 L763,134 L768,135 L772,135 L777,135 L782,135 L786,135 L791,134 L795,134 L800,134 L805,134 L809,133 L814,133 L818,132 L823,132 L828,131 L832,131 L837,130 L841,129 L846,129 L850,128 L855,127 L860,127 L864,126 L869,125 L873,125 L878,124 L882,123 L887,123 L892,122 L896,121 L901,121 L905,120 L910,120 L915,120 L919,119 L924,119 L928,119 L933,118 L938,118 L942,118 L947,118 L952,118 L956,117 L961,117 L966,117 L970,117 L975,117 L979,117 L984,116 L989,116 L993,116 L998,116 L1002,115 L1007,115 L1011,115 L1016,114 L1020,114 L1024,114 L1029,113 L1033,112 L1037,112 L1041,111 L1046,111 L1050,110 L1054,109 L1058,108 L1062,108 L1067,107 L1071,106 L1075,105 L1079,105 L1083,104 L1087,103 L1091,102 L1095,102 L1099,101 L1103,100 L1108,100 L1112,99 L1116,99 L1120,98 L1124,98 L1129,97 L1133,97 L1138,96 L1143,96 L1147,95 L1152,95 L1157,94 L1162,94 L1167,94 L1172,93 L1176,93 L1181,93 L1185,92 L1190,92 L1194,92 L1198,92 L1202,91 L1206,91 L1209,91 L1212,91 L1215,90 L1218,90 L1220,90"/>
+      <path class="levee" d="M471,162 L475,162 L479,162 L484,162 L488,162 L492,162 L497,162 L501,162 L506,163 L510,163 L515,163 L519,164 L524,164 L528,164 L533,165 L538,165 L542,165 L547,166 L552,166 L557,166 L561,166 L566,166 L571,166 L576,166 L581,166 L586,166 L591,165 L596,165 L600,164 L605,164 L610,163 L615,162 L619,161 L624,161 L629,160 L633,159 L638,158 L643,157 L647,156 L652,155 L656,155 L661,154 L665,153 L669,152 L674,152 L678,151 L683,151 L687,150 L691,150 L695,150 L700,149 L704,149 L709,149 L713,149 L717,149 L722,149 L726,149 L731,149 L735,150 L740,150 L744,150 L749,150 L754,150 L758,150 L763,150 L768,151 L772,151 L777,151 L782,151 L787,151 L791,150 L796,150 L801,150 L806,150 L811,149 L815,149 L820,148 L825,148 L830,147 L834,147 L839,146 L844,145 L848,145 L853,144 L857,143"/>
+      <path class="edge e0" d="M171,187 Q79,138 70,34"/><path class="edge e1" d="M321,162 Q251,206 171,187"/><path class="edge e2" d="M700,149 Q601,162 524,98"/><path class="edge e3" d="M700,149 Q767,133 823,172"/><text class="edge-label e0" x="100" y="128" text-anchor="middle">within</text><text class="edge-label e1" x="249" y="194" text-anchor="middle">monitors</text><text class="edge-label e2" x="606" y="147" text-anchor="middle">part of</text><text class="edge-label e3" x="764" y="151" text-anchor="middle">protects</text><g class="node n0"><circle cx="70" cy="34" r="7"/><text x="84" y="32" text-anchor="start">Guadalupe River watershed</text><text class="src" x="84" y="49" text-anchor="start">Watershed Boundary Dataset</text></g><g class="node n1"><circle cx="171" cy="187" r="7"/><text x="151" y="221" text-anchor="start">Guadalupe River</text><text class="src" x="151" y="238" text-anchor="start">National Hydrography Dataset</text></g><g class="node n2"><path d="M321,153 L329,168 L313,168Z"/><text x="281" y="122" text-anchor="start">Stream gauge</text><text class="src" x="281" y="139" text-anchor="start">USGS monitoring network</text></g><g class="node n3"><circle cx="700" cy="149" r="7"/><text x="684" y="185" text-anchor="end">Levee segment</text><text class="src" x="684" y="202" text-anchor="end">National Levee Database</text></g><g class="node n4"><circle cx="524" cy="98" r="7"/><text x="538" y="74" text-anchor="start">Upper Guadalupe project</text><text class="src" x="538" y="91" text-anchor="start">USACE project data</text></g><g class="node n5"><circle cx="823" cy="172" r="7"/><text x="837" y="176" text-anchor="start">Elementary school</text><text class="src" x="837" y="193" text-anchor="start">Critical facilities data</text></g>
+      <g class="ask">
+        <rect class="q-bubble" x="470" y="248" width="720" height="40" rx="20"/>
+        <text class="q q-text" x="490" y="273">Which schools are protected by levees in the Upper Guadalupe project?</text>
+        <text class="q-src" x="490" y="312">1 site found, from 3 linked datasets, with sources cited</text>
+      </g>
+    </svg></div>
+    <figcaption>Each feature is a real place from an authoritative dataset. Linked in Geoprism Registry, the relationships between them become questions Kaleidoscope can answer.</figcaption>
+  </figure>
+
+  
+
+  <section class="flow" aria-labelledby="flow-title">
+    <h2 id="flow-title">How it works</h2>
+    <ol class="steps">
+      <li><h3>Integrate</h3><p>Combine disparate datasets from many agencies based on location.</p></li>
+      <li><h3>Enhance</h3><p>Validate the data, relate features to one another and record where each value came from.</p></li>
+      <li><h3>Publish</h3><p>Release versioned linked data to Kaleidoscope and other systems.</p></li>
+      <li class="ask-step"><h3>Assess</h3><p>Ask questions in Kaleidoscope to assess sites for flood risk reduction.</p></li>
+    </ol>
+    <div class="owners" aria-hidden="true"><span>In Geoprism Registry</span><span>In Kaleidoscope</span></div>
+  </section>
+
+  <section class="context" aria-label="Objectives and current focus">
+    <div>
+      <h2>Supporting USACE VAULTIS objectives</h2>
+      <p>The GKI supports the VAULTIS goals of making data visible, accessible, understandable, linked, trustworthy and interoperable. Geoprism Registry publishes versioned data that staff and systems can find and use, defines what each feature and relationship means, links datasets through location, records where each value came from and uses open standards, including OGC standards where they apply, to exchange data with other systems.</p>
+      <p>The work also aligns with the interoperability objectives of the Army Unified Data Reference Architecture (UDRA) and the AI scalability objectives of America&rsquo;s AI Action Plan.</p>
+    </div>
+    <div class="now">
+      <h2>Current focus: integrity, provenance and trust</h2>
+      <p>Ongoing work improves usability and scalability and draws on the latest OGC Domain Working Group developments to establish Integrity, Provenance, and Trust (IPT), in collaboration with the Federal Geographic Data Committee (FGDC) and using the Internet of Water Coalition&rsquo;s published linked data.</p>
+    </div>
+  </section>
+
+  <footer>Developed by TerraFrame for the U.S. Army Corps of Engineers (USACE), with support from the Open Geospatial Consortium (OGC). Geoprism Registry is an open-source digital public good, originally developed by TerraFrame and managed independently of USACE, with significant contributions from USACE.</footer>
+</div>
 </body>
 </html>

@@ -6,11 +6,10 @@ import java.io.Reader;
 import java.util.List;
 import java.util.Map;
 
-import org.json.simple.parser.ParseException;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import net.geoprism.geoai.explorer.core.model.Style;
 import net.geoprism.geoai.explorer.core.model.VectorLayer;
@@ -19,7 +18,7 @@ import net.geoprism.geoai.explorer.core.model.VectorLayer;
 public class ConfigurationService
 {
 
-  public Map<String, Style> getStyles() throws IOException, ParseException
+  public Map<String, Style> getStyles() throws IOException
   {
     try (Reader reader = new InputStreamReader(this.getClass().getResourceAsStream("/styles.json")))
     {
@@ -30,7 +29,7 @@ public class ConfigurationService
     }
   }
 
-  public List<VectorLayer> getVectorLayers() throws IOException, ParseException
+  public List<VectorLayer> getVectorLayers() throws IOException
   {
     try (Reader reader = new InputStreamReader(this.getClass().getResourceAsStream("/vector-layers.json")))
     {

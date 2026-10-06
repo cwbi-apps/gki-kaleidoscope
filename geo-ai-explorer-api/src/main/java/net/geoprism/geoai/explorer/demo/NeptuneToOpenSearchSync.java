@@ -1,8 +1,8 @@
 package net.geoprism.geoai.explorer.demo;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.http.ContentStreamProvider;
 import software.amazon.awssdk.http.HttpExecuteRequest;
@@ -355,13 +355,13 @@ public class NeptuneToOpenSearchSync implements AutoCloseable
           failures++;
 
           message.append(" - id=")
-              .append(index.path("_id").asText())
+              .append(index.path("_id").asString())
               .append(", status=")
               .append(index.path("status").asInt())
               .append(", type=")
-              .append(error.path("type").asText())
+              .append(error.path("type").asString())
               .append(", reason=")
-              .append(error.path("reason").asText())
+              .append(error.path("reason").asString())
               .append("\n");
 
           if (failures >= 20)
@@ -453,7 +453,7 @@ public class NeptuneToOpenSearchSync implements AutoCloseable
     }
 
     JsonNode value = field.get("value");
-    return value == null || value.isNull() ? null : value.asText();
+    return value == null || value.isNull() ? null : value.asString();
   }
 
   private static String shortenType(String typeUri)
@@ -496,7 +496,7 @@ public class NeptuneToOpenSearchSync implements AutoCloseable
     {
       return MAPPER.writeValueAsString(obj);
     }
-    catch (JsonProcessingException e)
+    catch (JacksonException e)
     {
       throw new RuntimeException("JSON serialization failed", e);
     }
