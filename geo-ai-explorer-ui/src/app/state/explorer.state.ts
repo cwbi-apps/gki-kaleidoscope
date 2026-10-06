@@ -1,6 +1,5 @@
 import { createActionGroup, props, emptyProps, createReducer, on, createFeatureSelector, createSelector } from "@ngrx/store";
-// @ts-ignore
-import ColorGen from "color-generator";
+import ColorGen from "../util/color-generator";
 
 import { GeoObject } from '../models/geoobject.model';
 import { Style, StyleConfig } from '../models/style.model';

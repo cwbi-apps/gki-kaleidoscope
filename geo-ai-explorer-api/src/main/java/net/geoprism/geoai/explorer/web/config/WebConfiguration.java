@@ -1,6 +1,5 @@
 package net.geoprism.geoai.explorer.web.config;
 
-import java.util.List;
 import java.util.concurrent.Executor;
 
 import org.slf4j.Logger;
@@ -9,8 +8,6 @@ import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.aop.interceptor.SimpleAsyncUncaughtExceptionHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.concurrent.ConcurrentTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -67,11 +64,5 @@ public class WebConfiguration implements WebMvcConfigurer, AsyncConfigurer
   public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler()
   {
     return new SimpleAsyncUncaughtExceptionHandler();
-  }
-
-  @Override
-  public void configureMessageConverters(List<HttpMessageConverter<?>> converters)
-  {
-    converters.add(new MappingJackson2HttpMessageConverter());
   }
 }

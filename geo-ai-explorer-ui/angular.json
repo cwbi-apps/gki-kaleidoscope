@@ -27,7 +27,17 @@
             "inlineStyleLanguage": "scss",
             "assets": [
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              {
+                "glob": "maplibre-gl-worker.mjs",
+                "input": "node_modules/maplibre-gl/dist",
+                "output": "maplibre"
+              },
+              {
+                "glob": "maplibre-gl-shared.mjs",
+                "input": "node_modules/maplibre-gl/dist",
+                "output": "maplibre"
+              }
             ],
             "styles": [
               "src/styles.scss"
