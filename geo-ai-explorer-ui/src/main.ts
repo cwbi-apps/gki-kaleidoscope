@@ -1,3 +1,4 @@
+import { provideZoneChangeDetection } from "@angular/core";
 import { bootstrapApplication } from '@angular/platform-browser';
 import { setWorkerUrl } from 'maplibre-gl';
 import { appConfig } from './app/app.config';
@@ -10,5 +11,5 @@ import { AppComponent } from './app/app.component';
 // <base href> so it also works under a context path such as /kaleidoscope/.
 setWorkerUrl(new URL('maplibre/maplibre-gl-worker.mjs', document.baseURI).href);
 
-bootstrapApplication(AppComponent, appConfig)
+bootstrapApplication(AppComponent, {...appConfig, providers: [provideZoneChangeDetection(), ...appConfig.providers]})
   .catch((err) => console.error(err));

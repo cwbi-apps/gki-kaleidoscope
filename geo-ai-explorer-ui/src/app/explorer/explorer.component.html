@@ -7,7 +7,7 @@
        'layout-min-chat': workflowStep === WorkflowStep.MinimizeChat,
        'layout-inspect': workflowStep === WorkflowStep.InspectObject || workflowStep === WorkflowStep.ViewNeighbors
      }"
-     [style.--results-panel-height.px]="resultsPanelHeightPx">
+  [style.--results-panel-height.px]="resultsPanelHeightPx">
 
   <p-toast position="top-center" key="explorer" />
 
@@ -53,10 +53,12 @@
     appendTo="body"
     styleClass="save-query-dialog">
     <div class="save-query-form saved-query-details">
-      <div class="saved-query-meta" *ngIf="savedQueryDetails">
-        <span>Saved</span>
-        <strong>{{ formatSavedQueryDate(savedQueryDetails) }}</strong>
-      </div>
+      @if (savedQueryDetails) {
+        <div class="saved-query-meta">
+          <span>Saved</span>
+          <strong>{{ formatSavedQueryDate(savedQueryDetails) }}</strong>
+        </div>
+      }
 
       <label for="saved-query-name">Name</label>
       <input
@@ -88,374 +90,378 @@
     </ng-template>
   </p-dialog>
 
-  <div *ngIf="loading" class="spinner-overlay">
-    <p-progress-spinner ariaLabel="loading" />
-  </div>
+  @if (loading) {
+    <div class="spinner-overlay">
+      <p-progress-spinner ariaLabel="loading" />
+    </div>
+  }
 
   <!-- Chat -->
-  <section class="chat-panel"
-           *ngIf="
-             workflowStep === WorkflowStep.FullScreenChat ||
-             workflowStep === WorkflowStep.AiChatAndResults ||
-             workflowStep === WorkflowStep.MinimizeChat
-           ">
-
-    <aichat [class.small-ai-chat]="workflowStep === WorkflowStep.MinimizeChat"></aichat>
-  </section>
-
-  <section class="inspector" *ngIf="selectedObject && workflowStep !== WorkflowStep.FullScreenChat">
-    <div
-      *ngIf="workflowStep !== WorkflowStep.DisambiguateObject"
-      class="inspector-top-actions">
-      <p-button
-        class="inspector-back-button"
-        severity="secondary"
-        pTooltip="Go Back"
-        (onClick)="onMapBack()"
+  @if (
+    workflowStep === WorkflowStep.FullScreenChat ||
+    workflowStep === WorkflowStep.AiChatAndResults ||
+    workflowStep === WorkflowStep.MinimizeChat
+    ) {
+    <section class="chat-panel"
       >
-        <fa-icon [icon]="backIcon"></fa-icon>
-        <label>
-          {{ getBackButtonLabel(previousWorkflowStep$ | async) }}
-        </label>
-      </p-button>
+      <aichat [class.small-ai-chat]="workflowStep === WorkflowStep.MinimizeChat"></aichat>
+    </section>
+  }
 
-      <button
-        *ngIf="isInspectorWorkflowStep() && !attributesPanelOpen"
-        type="button"
-        class="relationship-btn"
-        [class.active]="graphPanelOpen"
-        [pTooltip]="graphPanelOpen ? 'Close Graph Visualizer' : 'Open Graph Visualizer'"
-        tooltipPosition="bottom"
-        (click)="toggleGraphPanel()">
-        <fa-icon [icon]="relationshipIcon"></fa-icon>
-      </button>
-    </div>
-
+  @if (selectedObject && workflowStep !== WorkflowStep.FullScreenChat) {
+    <section class="inspector">
+      @if (workflowStep !== WorkflowStep.DisambiguateObject) {
+        <div
+          class="inspector-top-actions">
+          <p-button
+            class="inspector-back-button"
+            severity="secondary"
+            pTooltip="Go Back"
+            (onClick)="onMapBack()"
+            >
+            <fa-icon [icon]="backIcon"></fa-icon>
+            <label>
+              {{ getBackButtonLabel(previousWorkflowStep$ | async) }}
+            </label>
+          </p-button>
+          @if (isInspectorWorkflowStep() && !attributesPanelOpen) {
+            <button
+              type="button"
+              class="relationship-btn"
+              [class.active]="graphPanelOpen"
+              [pTooltip]="graphPanelOpen ? 'Close Graph Visualizer' : 'Open Graph Visualizer'"
+              tooltipPosition="bottom"
+              (click)="toggleGraphPanel()">
+              <fa-icon [icon]="relationshipIcon"></fa-icon>
+            </button>
+          }
+        </div>
+      }
       <div
         class="horizontal-layout inspector-controls"
         [class.has-floating-back]="workflowStep !== WorkflowStep.DisambiguateObject"
         [style.--inspector-left-width.%]="inspectorSplitPercent">
-          <ng-container *ngIf="(previousWorkflowStep$ | async) === WorkflowStep.DisambiguateObject">
-            <h2>Select An Object</h2>
-
-            <p-button class="disambiguate-inspector-select-button"
-                      severity="secondary"
-                      pTooltip="Use the selected object to resolve the ambiguity"
-                      (onClick)="disambiguate()"
-                      [disabled]="selectedObject == null">
-              <label>Select</label>
-              <fa-icon [icon]="forwardIcon"></fa-icon>
-            </p-button>
-          </ng-container>
+        @if ((previousWorkflowStep$ | async) === WorkflowStep.DisambiguateObject) {
+          <h2>Select An Object</h2>
+          <p-button class="disambiguate-inspector-select-button"
+            severity="secondary"
+            pTooltip="Use the selected object to resolve the ambiguity"
+            (onClick)="disambiguate()"
+            [disabled]="selectedObject == null">
+            <label>Select</label>
+            <fa-icon [icon]="forwardIcon"></fa-icon>
+          </p-button>
+        }
       </div>
-
       <!-- Old minimize code. Hanging around just in-case we want it back -->
       <!--
       <div class="min-max">
         <p-button *ngIf="!chatMinimized"
-                  severity="secondary"
-                  pTooltip="Minimize"
-                  (onClick)="minimizeChat()">
+          severity="secondary"
+          pTooltip="Minimize"
+          (onClick)="minimizeChat()">
           <fa-icon [icon]="minimizeIcon"></fa-icon>
         </p-button>
-
         <p-button *ngIf="chatMinimized"
-                  severity="secondary"
-                  pTooltip="Maximize"
-                  (onClick)="minimizeChat()">
+          severity="secondary"
+          pTooltip="Maximize"
+          (onClick)="minimizeChat()">
           <fa-icon [icon]="upsizeIcon"></fa-icon>
         </p-button>
       </div>
       -->
-
-    <div
-      class="inspector-workspace"
-      [class.attributes-hidden]="!attributesPanelOpen"
-      [class.graph-open]="graphPanelOpen"
-      *ngIf="isInspectorWorkflowStep()"
-      [style.--inspector-left-width.%]="inspectorSplitPercent"
-      [style.--inspector-graph-width.%]="graphPanelWidthPercent">
-      <section
-        class="object-pane object-pane-map">
-        <div #mapElement id="map"></div>
-        <ng-container *ngTemplateOutlet="legendPanelTemplate"></ng-container>
-      </section>
-
-      <div
-        *ngIf="attributesPanelOpen"
-        class="inspector-resizer"
-        role="separator"
-        aria-orientation="vertical"
-        tabindex="0"
-        (pointerdown)="startInspectorResize($event)"
-        (pointermove)="onInspectorResize($event)"
-        (pointerup)="endInspectorResize($event)"
-        (pointercancel)="endInspectorResize($event)">
-      </div>
-
-      <div class="inspector-pull-tabs">
-        <button
-          type="button"
-          class="inspector-pull-tab"
-          [class.active]="attributesPanelOpen"
-          [pTooltip]="attributesPanelOpen ? 'Close Attributes' : 'Open Attributes'"
-          tooltipPosition="right"
-          (click)="toggleAttributesPanel()">
-          <fa-icon [icon]="attributesPanelOpen ? hideAttributesIcon : showAttributesIcon"></fa-icon>
-        </button>
-      </div>
-
-      <div class="sidebar-top-toolbar" *ngIf="attributesPanelOpen">
-        <button
-          *ngIf="isInspectorWorkflowStep()"
-          type="button"
-          class="relationship-btn"
-          [class.active]="graphPanelOpen"
-          [pTooltip]="graphPanelOpen ? 'Close Graph Visualizer' : 'Open Graph Visualizer'"
-          tooltipPosition="right"
-          (click)="toggleGraphPanel()">
-          <fa-icon [icon]="relationshipIcon"></fa-icon>
-        </button>
-      </div>
-
-      <section
-        class="object-pane object-pane-attributes"
-        *ngIf="attributesPanelOpen">
-        <div class="object-pane-shell">
-          <div class="object-pane-body">
-            <h2 class="inspector-title"
-                *ngIf="(previousWorkflowStep$ | async) !== WorkflowStep.DisambiguateObject">
+      @if (isInspectorWorkflowStep()) {
+        <div
+          class="inspector-workspace"
+          [class.attributes-hidden]="!attributesPanelOpen"
+          [class.graph-open]="graphPanelOpen"
+          [style.--inspector-left-width.%]="inspectorSplitPercent"
+          [style.--inspector-graph-width.%]="graphPanelWidthPercent">
+          <section
+            class="object-pane object-pane-map">
+            <div #mapElement id="map"></div>
+            <ng-container *ngTemplateOutlet="legendPanelTemplate"></ng-container>
+          </section>
+          @if (attributesPanelOpen) {
+            <div
+              class="inspector-resizer"
+              role="separator"
+              aria-orientation="vertical"
+              tabindex="0"
+              (pointerdown)="startInspectorResize($event)"
+              (pointermove)="onInspectorResize($event)"
+              (pointerup)="endInspectorResize($event)"
+              (pointercancel)="endInspectorResize($event)">
+            </div>
+          }
+          <div class="inspector-pull-tabs">
+            <button
+              type="button"
+              class="inspector-pull-tab"
+              [class.active]="attributesPanelOpen"
+              [pTooltip]="attributesPanelOpen ? 'Close Attributes' : 'Open Attributes'"
+              tooltipPosition="right"
+              (click)="toggleAttributesPanel()">
+              <fa-icon [icon]="attributesPanelOpen ? hideAttributesIcon : showAttributesIcon"></fa-icon>
+            </button>
+          </div>
+          @if (attributesPanelOpen) {
+            <div class="sidebar-top-toolbar">
+              @if (isInspectorWorkflowStep()) {
+                <button
+                  type="button"
+                  class="relationship-btn"
+                  [class.active]="graphPanelOpen"
+                  [pTooltip]="graphPanelOpen ? 'Close Graph Visualizer' : 'Open Graph Visualizer'"
+                  tooltipPosition="right"
+                  (click)="toggleGraphPanel()">
+                  <fa-icon [icon]="relationshipIcon"></fa-icon>
+                </button>
+              }
+            </div>
+          }
+          @if (attributesPanelOpen) {
+            <section
+              class="object-pane object-pane-attributes"
+              >
+              <div class="object-pane-shell">
+                <div class="object-pane-body">
+                  @if ((previousWorkflowStep$ | async) !== WorkflowStep.DisambiguateObject) {
+                    <h2 class="inspector-title"
+                      >
+                      {{ selectedObject.properties.label }}
+                    </h2>
+                  }
+                  @if (selectedObject) {
+                    <attribute-panel></attribute-panel>
+                  }
+                </div>
+              </div>
+            </section>
+          }
+          @if (graphPanelOpen) {
+            <section
+              class="object-pane object-pane-graph"
+              >
+              <div class="object-pane-shell">
+                <div class="object-pane-body">
+                  <graph-explorer
+                    #graphExplorer
+                    [explorer]="this">
+                  </graph-explorer>
+                </div>
+              </div>
+            </section>
+          }
+          @if (graphPanelOpen && !attributesPanelOpen) {
+            <div
+              class="graph-resizer"
+              role="separator"
+              aria-orientation="vertical"
+              tabindex="0"
+              (pointerdown)="startGraphResize($event)"
+              (pointermove)="onGraphResize($event)"
+              (pointerup)="endGraphResize($event)"
+              (pointercancel)="endGraphResize($event)">
+            </div>
+          }
+        </div>
+      }
+      @if (!isInspectorWorkflowStep()) {
+        <div id="graphExplorerContainer">
+          @if ((previousWorkflowStep$ | async) === WorkflowStep.DisambiguateObject) {
+            <h2 class="inspector-title">
               {{ selectedObject.properties.label }}
             </h2>
-            <attribute-panel *ngIf="selectedObject"></attribute-panel>
-          </div>
+          }
+          <p-tabs [(value)]="activeTab">
+            <p-tablist>
+              <p-tab value="0">Attributes</p-tab>
+              <p-tab value="1">Relationships</p-tab>
+            </p-tablist>
+            <p-tabpanels>
+              <p-tabpanel value="0">
+                @if (selectedObject) {
+                  <attribute-panel></attribute-panel>
+                }
+              </p-tabpanel>
+              <p-tabpanel value="1">
+                @if (activeTab === '1') {
+                  <graph-explorer
+                    #graphExplorer
+                    [explorer]="this">
+                  </graph-explorer>
+                }
+              </p-tabpanel>
+            </p-tabpanels>
+          </p-tabs>
         </div>
-      </section>
-
-      <section
-        class="object-pane object-pane-graph"
-        *ngIf="graphPanelOpen">
-        <div class="object-pane-shell">
-          <div class="object-pane-body">
-            <graph-explorer
-              #graphExplorer
-              [explorer]="this">
-            </graph-explorer>
-          </div>
-        </div>
-      </section>
-
-      <div
-        *ngIf="graphPanelOpen && !attributesPanelOpen"
-        class="graph-resizer"
-        role="separator"
-        aria-orientation="vertical"
-        tabindex="0"
-        (pointerdown)="startGraphResize($event)"
-        (pointermove)="onGraphResize($event)"
-        (pointerup)="endGraphResize($event)"
-        (pointercancel)="endGraphResize($event)">
-      </div>
-    </div>
-
-    <div id="graphExplorerContainer" *ngIf="!isInspectorWorkflowStep()">
-      <ng-container *ngIf="(previousWorkflowStep$ | async) === WorkflowStep.DisambiguateObject">
-        <h2 class="inspector-title">
-          {{ selectedObject.properties.label }}
-        </h2>
-      </ng-container>
-
-      <p-tabs [(value)]="activeTab">
-        <p-tablist>
-          <p-tab value="0">Attributes</p-tab>
-          <p-tab value="1">Relationships</p-tab>
-        </p-tablist>
-
-        <p-tabpanels>
-          <p-tabpanel value="0">
-            <attribute-panel *ngIf="selectedObject"></attribute-panel>
-          </p-tabpanel>
-
-          <p-tabpanel value="1">
-            <graph-explorer *ngIf="activeTab === '1'"
-                            #graphExplorer
-                            [explorer]="this">
-            </graph-explorer>
-          </p-tabpanel>
-        </p-tabpanels>
-      </p-tabs>
-    </div>
-  </section>
+      }
+    </section>
+  }
 
   <!-- Map -->
-  <section class="map-panel"
-           *ngIf="
-             workflowStep === WorkflowStep.MapAndResults ||
-             workflowStep === WorkflowStep.DisambiguateObject ||
-             workflowStep === WorkflowStep.MinimizeChat
-           ">
-
-    <div #mapElement id="map"></div>
-
-    <p-button
-      *ngIf="selectedObject == null && workflowStep !== WorkflowStep.DisambiguateObject"
-      class="map-back-button"
-      severity="secondary"
-      pTooltip="Go Back"
-      (onClick)="onMapBack()"
-    >
-      <fa-icon [icon]="backIcon"></fa-icon>
-      <label>Back to chat</label>
-    </p-button>
-
-    <p-button
-      *ngIf="selectedObject == null && workflowStep !== WorkflowStep.DisambiguateObject && canSaveCurrentQueryValue && !currentSavedQueryIndexValue"
-      class="map-save-query-button"
-      severity="secondary"
-      pTooltip="Save query"
-      (onClick)="openSaveQueryDialog()"
-    >
-      <fa-icon [icon]="saveQueryIcon"></fa-icon>
-      <label>Save Query</label>
-    </p-button>
-
-    <p-button
-      *ngIf="selectedObject == null && workflowStep !== WorkflowStep.DisambiguateObject && canSaveCurrentQueryValue && currentSavedQueryIndexValue"
-      class="map-save-query-button"
-      severity="success"
-      pTooltip="Saved query details"
-      (onClick)="openSavedQueryDialog()"
-    >
-      <fa-icon [icon]="saveQueryIcon"></fa-icon>
-      <label>{{ currentSavedQueryValue?.title ?? 'Saved Query' }}</label>
-    </p-button>
-
-    <ng-container *ngTemplateOutlet="legendPanelTemplate"></ng-container>
-  </section>
+  @if (
+    workflowStep === WorkflowStep.MapAndResults ||
+    workflowStep === WorkflowStep.DisambiguateObject ||
+    workflowStep === WorkflowStep.MinimizeChat
+    ) {
+    <section class="map-panel"
+      >
+      <div #mapElement id="map"></div>
+      @if (selectedObject == null && workflowStep !== WorkflowStep.DisambiguateObject) {
+        <p-button
+          class="map-back-button"
+          severity="secondary"
+          pTooltip="Go Back"
+          (onClick)="onMapBack()"
+          >
+          <fa-icon [icon]="backIcon"></fa-icon>
+          <label>Back to chat</label>
+        </p-button>
+      }
+      @if (selectedObject == null && workflowStep !== WorkflowStep.DisambiguateObject && canSaveCurrentQueryValue && !currentSavedQueryIndexValue) {
+        <p-button
+          class="map-save-query-button"
+          severity="secondary"
+          pTooltip="Save query"
+          (onClick)="openSaveQueryDialog()"
+          >
+          <fa-icon [icon]="saveQueryIcon"></fa-icon>
+          <label>Save Query</label>
+        </p-button>
+      }
+      @if (selectedObject == null && workflowStep !== WorkflowStep.DisambiguateObject && canSaveCurrentQueryValue && currentSavedQueryIndexValue) {
+        <p-button
+          class="map-save-query-button"
+          severity="success"
+          pTooltip="Saved query details"
+          (onClick)="openSavedQueryDialog()"
+          >
+          <fa-icon [icon]="saveQueryIcon"></fa-icon>
+          <label>{{ currentSavedQueryValue?.title ?? 'Saved Query' }}</label>
+        </p-button>
+      }
+      <ng-container *ngTemplateOutlet="legendPanelTemplate"></ng-container>
+    </section>
+  }
 
   <!-- Results / Disambiguation Body -->
-  <section class="results-panel"
-           *ngIf="
-             workflowStep === WorkflowStep.AiChatAndResults ||
-             workflowStep === WorkflowStep.MapAndResults ||
-             workflowStep === WorkflowStep.DisambiguateObject ||
-             workflowStep === WorkflowStep.MinimizeChat
-           ">
-    <!-- Disambiguation Header -->
-    <div id="disambiguate-header"
-        class="horizontal-layout"
-        *ngIf="workflowStep === WorkflowStep.DisambiguateObject">
-
-      <p-button
-        class="disambiguate-back-button"
-        severity="secondary"
-        pTooltip="Go Back"
-        (onClick)="onMapBack()">
-        <fa-icon [icon]="backIcon"></fa-icon>
-        <label>Back to chat</label>
-      </p-button>
-
-      <h2>Select An Object</h2>
-
-      <p-button severity="secondary"
-                pTooltip="Use the selected object to resolve the ambiguity"
-                (onClick)="disambiguate()"
-                [disabled]="selectedObject == null">
-        <label>Select</label>
-        <fa-icon [icon]="forwardIcon"></fa-icon>
-      </p-button>
-    </div>
-
-    <ng-container>
-      <results-table
-        #resultsTable
-        (resultsHeightChange)="onResultsHeightChange($event)"
-        (resultsCollapsedChange)="onResultsCollapsedChange($event)"
-        [collapsed]="resultsCollapsed"
-        [resizable]="workflowStep !== WorkflowStep.DisambiguateObject"
-      ></results-table>
-    </ng-container>
-  </section>
+  @if (
+    workflowStep === WorkflowStep.AiChatAndResults ||
+    workflowStep === WorkflowStep.MapAndResults ||
+    workflowStep === WorkflowStep.DisambiguateObject ||
+    workflowStep === WorkflowStep.MinimizeChat
+    ) {
+    <section class="results-panel"
+      >
+      <!-- Disambiguation Header -->
+      @if (workflowStep === WorkflowStep.DisambiguateObject) {
+        <div id="disambiguate-header"
+          class="horizontal-layout"
+          >
+          <p-button
+            class="disambiguate-back-button"
+            severity="secondary"
+            pTooltip="Go Back"
+            (onClick)="onMapBack()">
+            <fa-icon [icon]="backIcon"></fa-icon>
+            <label>Back to chat</label>
+          </p-button>
+          <h2>Select An Object</h2>
+          <p-button severity="secondary"
+            pTooltip="Use the selected object to resolve the ambiguity"
+            (onClick)="disambiguate()"
+            [disabled]="selectedObject == null">
+            <label>Select</label>
+            <fa-icon [icon]="forwardIcon"></fa-icon>
+          </p-button>
+        </div>
+      }
+      <ng-container>
+        <results-table
+          #resultsTable
+          (resultsHeightChange)="onResultsHeightChange($event)"
+          (resultsCollapsedChange)="onResultsCollapsedChange($event)"
+          [collapsed]="resultsCollapsed"
+          [resizable]="workflowStep !== WorkflowStep.DisambiguateObject"
+        ></results-table>
+      </ng-container>
+    </section>
+  }
 
   <!-- Legend -->
   <ng-template #legendPanelTemplate>
-    <p-panel *ngIf="
-               workflowStep === WorkflowStep.MapAndResults ||
-               workflowStep === WorkflowStep.MinimizeChat ||
-               workflowStep === WorkflowStep.InspectObject ||
-               workflowStep === WorkflowStep.ViewNeighbors
-             "
-           [toggleable]="true"
-           [(collapsed)]="legendCollapsed"
-           (click)="onLegendPanelClick($event)"
-           class="legend">
-
-      <ng-template pTemplate="header">
-        <h4>Layers</h4>
-      </ng-template>
-
-    <ng-container *ngIf="orderedTypes.length > 0">
-      <div cdkDropList (cdkDropListDropped)="drop($event)">
-        <div class="legend-item horizontal-layout"
-             *ngFor="let type of orderedTypes"
-             cdkDrag>
-
-          <ng-container *ngIf="typeLegend[type] as legend">
-            <span
-              class="legend-drag-handle"
-              cdkDragHandle
-              aria-hidden="true"
-              (click)="$event.stopPropagation()">
-            </span>
-
-            <p-checkbox binary="true"
-                        [ngModel]="legend.visible"
-                        [inputId]="legend.label"
-                        (onChange)="toggleTypeLegend(type, legend)" />
-
-            <div class="square"
-                 [ngStyle]="{ background: legend.color }">
-            </div>
-
-            <button type="button"
+    @if (
+      workflowStep === WorkflowStep.MapAndResults ||
+      workflowStep === WorkflowStep.MinimizeChat ||
+      workflowStep === WorkflowStep.InspectObject ||
+      workflowStep === WorkflowStep.ViewNeighbors
+      ) {
+      <p-panel
+        [toggleable]="true"
+        [(collapsed)]="legendCollapsed"
+        (click)="onLegendPanelClick($event)"
+        class="legend">
+        <ng-template pTemplate="header">
+          <h4>Layers</h4>
+        </ng-template>
+        @if (orderedTypes.length > 0) {
+          <div cdkDropList (cdkDropListDropped)="drop($event)">
+            @for (type of orderedTypes; track type) {
+              <div class="legend-item horizontal-layout"
+                cdkDrag>
+                @if (typeLegend[type]; as legend) {
+                  <span
+                    class="legend-drag-handle"
+                    cdkDragHandle
+                    aria-hidden="true"
+                    (click)="$event.stopPropagation()">
+                  </span>
+                  <p-checkbox binary="true"
+                    [ngModel]="legend.visible"
+                    [inputId]="legend.label"
+                    (onChange)="toggleTypeLegend(type, legend)" />
+                  <div class="square"
+                    [ngStyle]="{ background: legend.color }">
+                  </div>
+                  <button type="button"
                     class="legend-layer-name"
                     (pointerdown)="$event.stopPropagation()"
                     (mousedown)="$event.stopPropagation()"
                     (touchstart)="$event.stopPropagation()"
                     (click)="openResultsForType(type, $event)">
-              {{ legend.label }}
-            </button>
-          </ng-container>
-        </div>
-      </div>
-    </ng-container>
-
-    <hr class="legend-divider">
-
-    <ng-container *ngIf="vectorLayers$ | async as vectorLayers">
-      <ng-container *ngIf="vectorLayers.length > 0">
-        <h4>Context Layers</h4>
-
-        <div>
-          <div class="legend-item horizontal-layout"
-              *ngFor="let layer of vectorLayers">
-
-            <p-checkbox binary="true"
-                        [ngModel]="layer.enabled"
-                        [inputId]="layer.id"
-                        (onChange)="toggleVectorLayer(layer)" />
-
-            <div class="square"
-                [ngStyle]="{ background: layer.color }">
-            </div>
-
-            <label [for]="layer.id" class="ml-2">
-              {{ layer.label }}
-            </label>
+                    {{ legend.label }}
+                  </button>
+                }
+              </div>
+            }
           </div>
-        </div>
-      </ng-container>
-    </ng-container>
-    </p-panel>
+        }
+        <hr class="legend-divider">
+        @if (vectorLayers$ | async; as vectorLayers) {
+          @if (vectorLayers.length > 0) {
+            <h4>Context Layers</h4>
+            <div>
+              @for (layer of vectorLayers; track layer) {
+                <div class="legend-item horizontal-layout"
+                  >
+                  <p-checkbox binary="true"
+                    [ngModel]="layer.enabled"
+                    [inputId]="layer.id"
+                    (onChange)="toggleVectorLayer(layer)" />
+                  <div class="square"
+                    [ngStyle]="{ background: layer.color }">
+                  </div>
+                  <label [for]="layer.id" class="ml-2">
+                    {{ layer.label }}
+                  </label>
+                </div>
+              }
+            </div>
+          }
+        }
+      </p-panel>
+    }
   </ng-template>
 </div>

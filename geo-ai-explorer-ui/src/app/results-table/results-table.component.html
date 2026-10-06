@@ -1,165 +1,169 @@
 <div class="results-panel">
-  <button
-    type="button"
-    class="results-collapse-toggle"
-    (click)="toggleCollapsed()"
-    [title]="collapsed ? 'Expand results' : 'Collapse results'"
-    [attr.aria-label]="collapsed ? 'Expand results' : 'Collapse results'"
-    [pTooltip]="collapsed ? 'Expand results' : 'Collapse results'"
-    *ngIf="resizable"
-  >
-    <fa-icon [icon]="collapsed ? expandIcon : collapseIcon"></fa-icon>
-  </button>
+  @if (resizable) {
+    <button
+      type="button"
+      class="results-collapse-toggle"
+      (click)="toggleCollapsed()"
+      [title]="collapsed ? 'Expand results' : 'Collapse results'"
+      [attr.aria-label]="collapsed ? 'Expand results' : 'Collapse results'"
+      [pTooltip]="collapsed ? 'Expand results' : 'Collapse results'"
+      >
+      <fa-icon [icon]="collapsed ? expandIcon : collapseIcon"></fa-icon>
+    </button>
+  }
 
-  <div
-    class="results-resize-handle"
-    *ngIf="resizable && !collapsed"
-    (mousedown)="startResize($event)"
-    title="Resize results panel"
-    pTooltip="Resize results panel"
-  ></div>
+  @if (resizable && !collapsed) {
+    <div
+      class="results-resize-handle"
+      (mousedown)="startResize($event)"
+      title="Resize results panel"
+      pTooltip="Resize results panel"
+    ></div>
+  }
 
   <ng-container *ngrxLet="pages$ as pages">
 
-    <ng-container *ngIf="pages?.length && hasResults(pages); else zeroResults">
-
-      <div
-        class="results-header-row"
-        *ngIf="workflowStep !== WorkflowStep.DisambiguateObject"
-      >
-        <p-tabs
-          *ngIf="!collapsed"
-          [value]="activePageDisplayKey"
-          (valueChange)="selectActivePage($event)"
-          scrollable
-          class="results-tabs"
-        >
-          <p-tablist>
-            <p-tab
-              *ngFor="let option of pageDisplayOptions"
-              [value]="option.value"
-            >
-              <span class="results-table-tab-content">
-                <span class="results-table-tab-label">
-                  {{ option.label }}
-                </span>
-
-                <button
-                  type="button"
-                  class="pin-button"
-                  [class.pinned]="isPagePinned(option.value)"
-                  [disabled]="!isPagePinned(option.value) && pinnedPageDisplayKeys.length >= maxPinnedPages"
-                  (click)="togglePinnedPage(option.value); $event.stopPropagation()"
-                  [pTooltip]="isPagePinned(option.value) ? 'Unpin table' : 'Pin table'"
-                >
-                  <fa-icon [icon]="pinIcon"></fa-icon>
-                </button>
-              </span>
-            </p-tab>
-          </p-tablist>
-        </p-tabs>
-      </div>
-
-      <div
-        *ngIf="!collapsed"
-        class="results-table-columns"
+    @if (pages?.length && hasResults(pages)) {
+      @if (workflowStep !== WorkflowStep.DisambiguateObject) {
+        <div
+          class="results-header-row"
+          >
+          @if (!collapsed) {
+            <p-tabs
+              [value]="activePageDisplayKey"
+              (valueChange)="selectActivePage($event)"
+              scrollable
+              class="results-tabs"
+              >
+              <p-tablist>
+                @for (option of pageDisplayOptions; track option) {
+                  <p-tab
+                    [value]="option.value"
+                    >
+                    <span class="results-table-tab-content">
+                      <span class="results-table-tab-label">
+                        {{ option.label }}
+                      </span>
+                      <button
+                        type="button"
+                        class="pin-button"
+                        [class.pinned]="isPagePinned(option.value)"
+                        [disabled]="!isPagePinned(option.value) && pinnedPageDisplayKeys.length >= maxPinnedPages"
+                        (click)="togglePinnedPage(option.value); $event.stopPropagation()"
+                        [pTooltip]="isPagePinned(option.value) ? 'Unpin table' : 'Pin table'"
+                        >
+                        <fa-icon [icon]="pinIcon"></fa-icon>
+                      </button>
+                    </span>
+                  </p-tab>
+                }
+              </p-tablist>
+            </p-tabs>
+          }
+        </div>
+      }
+      @if (!collapsed) {
+        <div
+          class="results-table-columns"
         [ngClass]="{
           'single-table': displayedPageItems.length === 1,
           'two-tables': displayedPageItems.length === 2,
           'three-or-more-tables': displayedPageItems.length >= 3
         }"
-      >
-        <ng-container *ngFor="let item of displayedPageItems; trackBy: trackByPageItem">
-          <section class="results-table-column" *ngIf="item.page.count > 0">
-            <div class="results-table-title-row">
-              <h3 class="results-table-title">
-                {{ shouldShowTypeColumn(item.page) ? 'Results' : getPageTypeLabel(item.page) }}
-              </h3>
-
-              <button
-                type="button"
-                class="results-export-button"
-                pTooltip="Export CSV"
-                (click)="exportTable(item, $event)">
-                <fa-icon [icon]="exportIcon"></fa-icon>
-                <span>Export</span>
-              </button>
-            </div>
-
-            <div
-              class="results-table-body"
-              [class.loading]="isPageLoading(item)"
-              [attr.aria-busy]="isPageLoading(item)"
-            >
-              <div class="results-table-loading-overlay" *ngIf="isPageLoading(item)">
-                <p-progress-spinner ariaLabel="Loading results" />
-              </div>
-
-              <p-table
-                [value]="item.page.locations"
-                [tableStyle]="{ 'min-width': '100%' }"
-                stripedRows
-                [scrollable]="true"
-                scrollHeight="flex"
-                [size]="'small'"
-                (mouseleave)="onMouseLeaveTable()"
-              >
-                <ng-template #header>
-                  <tr>
-                    <th
-                      *ngFor="let column of item.columns"
-                      [attr.aria-sort]="getColumnAriaSort(item, column)"
-                    >
-                      <button
-                        type="button"
-                        class="results-sort-button"
-                        [class.sorted]="isColumnSorted(item, column)"
-                        [disabled]="isPageLoading(item)"
-                        (click)="onColumnSort(item, column)"
-                      >
-                        <span>{{ column.header }}</span>
-                        <fa-icon [icon]="getSortIcon(item, column)"></fa-icon>
-                      </button>
-                    </th>
-                  </tr>
-                </ng-template>
-
-                <ng-template #body let-object>
-                  <tr
-                    class="clickable"
-                    [ngClass]="{ 'highlight': highlightedObjectUri === object.properties.uri }"
-                    (click)="onClick(object)"
-                    (mouseenter)="onRowHover(object)"
+          >
+          @for (item of displayedPageItems; track trackByPageItem($index, item)) {
+            @if (item.page.count > 0) {
+              <section class="results-table-column">
+                <div class="results-table-title-row">
+                  <h3 class="results-table-title">
+                    {{ shouldShowTypeColumn(item.page) ? 'Results' : getPageTypeLabel(item.page) }}
+                  </h3>
+                  <button
+                    type="button"
+                    class="results-export-button"
+                    pTooltip="Export CSV"
+                    (click)="exportTable(item, $event)">
+                    <fa-icon [icon]="exportIcon"></fa-icon>
+                    <span>Export</span>
+                  </button>
+                </div>
+                <div
+                  class="results-table-body"
+                  [class.loading]="isPageLoading(item)"
+                  [attr.aria-busy]="isPageLoading(item)"
                   >
-                    <td *ngFor="let column of item.columns">
-                      {{ getColumnValue(object, column) }}
-                    </td>
-                  </tr>
-                </ng-template>
-              </p-table>
-            </div>
-
-            <p-paginator
-              *ngIf="!isPageLoading(item)"
-              styleClass="compact-paginator"
-              (onPageChange)="onPageChange($event, item.index)"
-              [first]="item.page.offset"
-              [rows]="item.page.limit"
-              [totalRecords]="item.page.count"
-              [showCurrentPageReport]="true"
-              currentPageReportTemplate="{first}-{last} of {totalRecords}"
-            />
-          </section>
-        </ng-container>
-      </div>
-
-    </ng-container>
-
-    <ng-template #zeroResults>
+                  @if (isPageLoading(item)) {
+                    <div class="results-table-loading-overlay">
+                      <p-progress-spinner ariaLabel="Loading results" />
+                    </div>
+                  }
+                  <p-table
+                    [value]="item.page.locations"
+                    [tableStyle]="{ 'min-width': '100%' }"
+                    stripedRows
+                    [scrollable]="true"
+                    scrollHeight="flex"
+                    [size]="'small'"
+                    (mouseleave)="onMouseLeaveTable()"
+                    >
+                    <ng-template #header>
+                      <tr>
+                        @for (column of item.columns; track column) {
+                          <th
+                            [attr.aria-sort]="getColumnAriaSort(item, column)"
+                            >
+                            <button
+                              type="button"
+                              class="results-sort-button"
+                              [class.sorted]="isColumnSorted(item, column)"
+                              [disabled]="isPageLoading(item)"
+                              (click)="onColumnSort(item, column)"
+                              >
+                              <span>{{ column.header }}</span>
+                              <fa-icon [icon]="getSortIcon(item, column)"></fa-icon>
+                            </button>
+                          </th>
+                        }
+                      </tr>
+                    </ng-template>
+                    <ng-template #body let-object>
+                      <tr
+                        class="clickable"
+                        [ngClass]="{ 'highlight': highlightedObjectUri === object.properties.uri }"
+                        (click)="onClick(object)"
+                        (mouseenter)="onRowHover(object)"
+                        >
+                        @for (column of item.columns; track column) {
+                          <td>
+                            {{ getColumnValue(object, column) }}
+                          </td>
+                        }
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+                @if (!isPageLoading(item)) {
+                  <p-paginator
+                    styleClass="compact-paginator"
+                    (onPageChange)="onPageChange($event, item.index)"
+                    [first]="item.page.offset"
+                    [rows]="item.page.limit"
+                    [totalRecords]="item.page.count"
+                    [showCurrentPageReport]="true"
+                    currentPageReportTemplate="{first}-{last} of {totalRecords}"
+                    />
+                }
+              </section>
+            }
+          }
+        </div>
+      }
+    } @else {
       <div class="vertical-layout">
         <label style="margin: 10px;">Zero Results!</label>
       </div>
-    </ng-template>
+    }
+
 
   </ng-container>
 </div>
