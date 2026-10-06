@@ -2,7 +2,7 @@
 #
 #
 
-FROM tomcat:11-jdk21
+FROM tomcat:11-jdk25
 
 ENV LOG_LEVEL=error
 
