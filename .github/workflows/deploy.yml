@@ -34,7 +34,7 @@ env:
   AWS_REGION: us-gov-west-1
   ECR_REPOSITORY: kaleidoscope-gki/kaleidoscope
   JAVA_VERSION: "25"
-  CONTEXT_PATH: "/"
+  CONTEXT_PATH: "/chat"
 
   DEPLOY_ENV: ${{ github.event_name == 'push' && 'dev' || inputs.environment }}
 
