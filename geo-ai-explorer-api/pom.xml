@@ -40,6 +40,39 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+			<!-- Jackson 2 and 3 ahead of Spring Boot's BOM: Boot 4.1.1 ships
+			     jackson-core 2.21.5 / 3.1.5, which have CWE-770 and ReDoS
+			     (CWE-1333) issues fixed in 2.21.7 / 3.1.7 -->
+			<dependency>
+				<groupId>com.fasterxml.jackson</groupId>
+				<artifactId>jackson-bom</artifactId>
+				<version>2.21.7</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>tools.jackson</groupId>
+				<artifactId>jackson-bom</artifactId>
+				<version>3.1.7</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<!-- Boot 4.1.1 ships Tomcat 11.0.24 (CVE-2026-65905, CVE-2026-68525, ...) -->
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-core</artifactId>
+				<version>11.0.27</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-el</artifactId>
+				<version>11.0.27</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-websocket</artifactId>
+				<version>11.0.27</version>
+			</dependency>
 			<!-- Spring Boot's BOM must come before the AWS and Jena BOMs: one of those
 			     pins spring-context/web/webmvc/test to Spring 5.3.39 (javax), which
 			     broke SpringBootServletInitializer. It also manages Jackson 2 and 3. -->
