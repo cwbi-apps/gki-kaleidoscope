@@ -26,7 +26,7 @@ on:
 env:
   AWS_REGION: us-gov-west-1
   SOURCE_FILE: portal-home.html
-  S3_KEY: portal-home.html
+  S3_KEY: index.html
 
 permissions:
   id-token: write
@@ -67,8 +67,8 @@ jobs:
               echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::718787032875:role/REPLACE_WITH_DEV_ROLE" >> "$GITHUB_ENV"
               ;;
             test)
-              echo "S3_BUCKET=REPLACE_WITH_TEST_BUCKET" >> "$GITHUB_ENV"
-              echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::276847049069:role/REPLACE_WITH_TEST_ROLE" >> "$GITHUB_ENV"
+              echo "S3_BUCKET=gki-test" >> "$GITHUB_ENV"
+              echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::276847049069:role/github-actions-ecr-kaleidoscope-gki-kaleidoscope" >> "$GITHUB_ENV"
               ;;
             prod)
               echo "S3_BUCKET=REPLACE_WITH_PROD_BUCKET" >> "$GITHUB_ENV"
