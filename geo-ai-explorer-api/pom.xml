@@ -73,6 +73,34 @@
 				<artifactId>tomcat-embed-websocket</artifactId>
 				<version>11.0.27</version>
 			</dependency>
+			<!-- Transitive CVE fixes: libthrift (via Jena) CVE-2026-82458, guava
+			     (via Neptune sigv4) CVE-2026-102554, parsson (via opensearch-java),
+			     logback CVE-2026-19880 / CVE-2026-104721 (no 1.5.x fix) -->
+			<dependency>
+				<groupId>org.apache.thrift</groupId>
+				<artifactId>libthrift</artifactId>
+				<version>0.25.0</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.guava</groupId>
+				<artifactId>guava</artifactId>
+				<version>33.7.2-jre</version>
+			</dependency>
+			<dependency>
+				<groupId>org.eclipse.parsson</groupId>
+				<artifactId>parsson</artifactId>
+				<version>1.1.9</version>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-classic</artifactId>
+				<version>1.6.5</version>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-core</artifactId>
+				<version>1.6.5</version>
+			</dependency>
 			<!-- Spring Boot's BOM must come before the AWS and Jena BOMs: one of those
 			     pins spring-context/web/webmvc/test to Spring 5.3.39 (javax), which
 			     broke SpringBootServletInitializer. It also manages Jackson 2 and 3. -->
