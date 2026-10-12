@@ -1,0 +1,109 @@
+name: Portal Home
+
+on:
+  #push:
+    #branches:
+      #- main
+    #paths:
+      #- "portal-home.html"
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy
+        required: true
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
+
+      ref:
+        description: Git commit SHA, branch, or tag to deploy
+        required: true
+        default: main
+
+env:
+  AWS_REGION: us-gov-west-1
+  SOURCE_FILE: portal-home.html
+  S3_KEY: portal-home.html
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  upload:
+    name: Upload Portal Home (${{ matrix.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ${{ fromJSON(github.event_name == 'push' && '["dev","test"]' || format('["{0}"]', inputs.environment)) }}
+
+    concurrency:
+      group: portal-home-${{ matrix.environment }}
+      cancel-in-progress: false
+
+    environment: ${{ matrix.environment }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || inputs.ref }}
+
+      - name: Configure deployment environment
+        env:
+          DEPLOY_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+
+          case "$DEPLOY_ENV" in
+            dev)
+              echo "S3_BUCKET=REPLACE_WITH_DEV_BUCKET" >> "$GITHUB_ENV"
+              echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::718787032875:role/REPLACE_WITH_DEV_ROLE" >> "$GITHUB_ENV"
+              ;;
+            test)
+              echo "S3_BUCKET=REPLACE_WITH_TEST_BUCKET" >> "$GITHUB_ENV"
+              echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::276847049069:role/REPLACE_WITH_TEST_ROLE" >> "$GITHUB_ENV"
+              ;;
+            prod)
+              echo "S3_BUCKET=REPLACE_WITH_PROD_BUCKET" >> "$GITHUB_ENV"
+              echo "AWS_ROLE_ARN=REPLACE_WITH_PROD_ROLE_ARN" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Unsupported deployment environment: $DEPLOY_ENV"
+              exit 1
+              ;;
+          esac
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Upload Portal Home to S3
+        env:
+          DEPLOY_ENV: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+
+          echo "Environment: $DEPLOY_ENV"
+          echo "Source:      $SOURCE_FILE"
+          echo "Destination: s3://${S3_BUCKET}/${S3_KEY}"
+
+          aws s3 cp \
+            "$SOURCE_FILE" \
+            "s3://${S3_BUCKET}/${S3_KEY}" \
+            --content-type "text/html"
+
+      - name: Verify uploaded file
+        run: |
+          aws s3 ls "s3://${S3_BUCKET}/${S3_KEY}"
