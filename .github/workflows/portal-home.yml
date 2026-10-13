@@ -63,16 +63,16 @@ jobs:
 
           case "$DEPLOY_ENV" in
             dev)
-              echo "S3_BUCKET=REPLACE_WITH_DEV_BUCKET" >> "$GITHUB_ENV"
-              echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::718787032875:role/REPLACE_WITH_DEV_ROLE" >> "$GITHUB_ENV"
+              echo "S3_BUCKET=gki-dev" >> "$GITHUB_ENV"
+              echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::718787032875:role/github-actions-s3-gki-kaleidoscope" >> "$GITHUB_ENV"
               ;;
             test)
               echo "S3_BUCKET=gki-test" >> "$GITHUB_ENV"
               echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::276847049069:role/github-actions-s3-gki-kaleidoscope" >> "$GITHUB_ENV"
               ;;
             prod)
-              echo "S3_BUCKET=REPLACE_WITH_PROD_BUCKET" >> "$GITHUB_ENV"
-              echo "AWS_ROLE_ARN=REPLACE_WITH_PROD_ROLE_ARN" >> "$GITHUB_ENV"
+              echo "S3_BUCKET=gki-prod" >> "$GITHUB_ENV"
+              echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::648157167324:role/github-actions-s3-gki-kaleidoscope" >> "$GITHUB_ENV"
               ;;
             *)
               echo "Unsupported deployment environment: $DEPLOY_ENV"

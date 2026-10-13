@@ -17,6 +17,7 @@ on:
         options:
           - dev
           - test
+          - prod
 
       ref:
         description: Git commit SHA, branch, or tag to deploy
@@ -66,6 +67,10 @@ jobs:
             test)
               echo "S3_BUCKET=gki-kaleidoscope-agents-test" >> "$GITHUB_ENV"
               echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::276847049069:role/github-actions-s3-gki-kaleidoscope" >> "$GITHUB_ENV"
+              ;;
+            prod)
+              echo "S3_BUCKET=gki-kaleidoscope-agents-prod" >> "$GITHUB_ENV"
+              echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::648157167324:role/github-actions-s3-gki-kaleidoscope" >> "$GITHUB_ENV"
               ;;
             *)
               echo "Unsupported deployment environment: $DEPLOY_ENV"
