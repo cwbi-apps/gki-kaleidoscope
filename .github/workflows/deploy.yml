@@ -20,6 +20,7 @@ on:
         options:
           - dev
           - test
+          - prod
 
       ref:
         description: Git commit SHA, branch, or tag to deploy
@@ -87,14 +88,33 @@ jobs:
             geo-ai-explorer-api/target/geo-ai-explorer-api.war \
             src/build/webapp/target/geo-ai-explorer-api.war
 
+      - name: Select AWS role
+        id: aws-role
+        shell: bash
+        run: |
+          case "$DEPLOY_ENV" in
+            dev)
+              ROLE_ARN="arn:aws-us-gov:iam::718787032875:role/github-actions-ecr-kaleidoscope-gki-kaleidoscope"
+              ;;
+            test)
+              ROLE_ARN="arn:aws-us-gov:iam::276847049069:role/github-actions-ecr-kaleidoscope-gki-kaleidoscope"
+              ;;
+            prod)
+              ROLE_ARN="arn:aws-us-gov:iam::648157167324:role/github-actions-ecr-kaleidoscope-gki-kaleidoscope"
+              ;;
+            *)
+              echo "Unsupported environment: $DEPLOY_ENV"
+              exit 1
+              ;;
+          esac
+      
+          echo "role_arn=$ROLE_ARN" >> "$GITHUB_OUTPUT"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: >-
-            ${{ env.DEPLOY_ENV == 'dev'
-              && 'arn:aws-us-gov:iam::718787032875:role/github-actions-ecr-kaleidoscope-gki-kaleidoscope'
-              || 'arn:aws-us-gov:iam::276847049069:role/github-actions-ecr-kaleidoscope-gki-kaleidoscope' }}
+          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
 
       - name: Verify AWS identity
         run: aws sts get-caller-identity
