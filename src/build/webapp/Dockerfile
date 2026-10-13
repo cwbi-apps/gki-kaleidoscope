@@ -2,7 +2,16 @@
 #
 #
 
-FROM tomcat:11-jdk25
+# Pinned to Ubuntu 24.04 (noble): the default 11-jdk25 tag is now Ubuntu 26.04,
+# which ships an unpackaged /usr/bin/pebble Go binary with stdlib CVEs and
+# rust-coreutils, which scanners flag against GNU coreutils CVEs.
+FROM tomcat:11-jdk25-temurin-noble
+
+# Drop pebble in case a base image ships it (Go binary, unused here, flagged for
+# go/stdlib CVEs) and pick up OS security fixes not yet in the base image
+RUN rm -f /usr/bin/pebble \
+ && apt-get update && apt-get upgrade -y --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
 
 ENV LOG_LEVEL=error
 
@@ -18,7 +27,8 @@ RUN mkdir -p $CATALINA_HOME/wars
 COPY target/geo-ai-explorer-api.war $CATALINA_HOME/wars/geoprism.war
 
 # Deploy War
-RUN mkdir -p $CATALINA_HOME/wars/geoprism && cd $CATALINA_HOME/wars/geoprism && $JAVA_HOME/bin/jar xf $CATALINA_HOME/wars/geoprism.war
+RUN mkdir -p $CATALINA_HOME/wars/geoprism && cd $CATALINA_HOME/wars/geoprism && $JAVA_HOME/bin/jar xf $CATALINA_HOME/wars/geoprism.war \
+ && rm $CATALINA_HOME/wars/geoprism.war
 RUN mv $CATALINA_HOME/wars/geoprism "$CATALINA_HOME/webapps/$CONTEXT_PATH"
 
 # Log4j properties
