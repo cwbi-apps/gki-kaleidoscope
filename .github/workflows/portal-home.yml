@@ -68,7 +68,7 @@ jobs:
               ;;
             test)
               echo "S3_BUCKET=gki-test" >> "$GITHUB_ENV"
-              echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::276847049069:role/github-actions-ecr-kaleidoscope-gki-kaleidoscope" >> "$GITHUB_ENV"
+              echo "AWS_ROLE_ARN=arn:aws-us-gov:iam::276847049069:role/github-actions-s3-gki-kaleidoscope" >> "$GITHUB_ENV"
               ;;
             prod)
               echo "S3_BUCKET=REPLACE_WITH_PROD_BUCKET" >> "$GITHUB_ENV"
