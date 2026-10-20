@@ -4,6 +4,7 @@ import java.util.EnumSet;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -31,5 +32,16 @@ public class Application extends SpringBootServletInitializer
     servletContext.setSessionTrackingModes(EnumSet.of(SessionTrackingMode.COOKIE));
 
     super.onStartup(servletContext);
+  }
+
+  // TEMPORARY: show error details on error pages while debugging. Remove once done.
+  @Override
+  protected SpringApplicationBuilder configure(SpringApplicationBuilder builder)
+  {
+    return builder.sources(Application.class).properties( //
+        "spring.web.error.include-message=always", //
+        "spring.web.error.include-exception=true", //
+        "spring.web.error.include-stacktrace=always", //
+        "logging.level.org.springframework.security.web.firewall=DEBUG");
   }
 }
