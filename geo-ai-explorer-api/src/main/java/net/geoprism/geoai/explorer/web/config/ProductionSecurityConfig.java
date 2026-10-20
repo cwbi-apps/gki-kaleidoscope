@@ -24,7 +24,7 @@ public class ProductionSecurityConfig
     // page (which can loop).
     http.authorizeHttpRequests(auth -> auth //
         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll() //
-        .requestMatchers("/error", "/login").permitAll() //
+        .requestMatchers("/error").permitAll() //
         .anyRequest().authenticated());
     http.formLogin(form -> form.permitAll());
     http.httpBasic(Customizer.withDefaults());
