@@ -249,13 +249,26 @@ def _fetch_stream(
     op_num: int,
 ) -> Dict[str, Any]:
 
-    params = {
-        "iteratorType":
-            "AFTER_SEQUENCE_NUMBER",
-        "commitNum": commit_num,
-        "opNum": op_num,
-        "limit": BATCH_SIZE,
-    }
+    #
+    # A freshly seeded checkpoint of 0/0 means "start from the oldest
+    # record in the stream". Neptune rejects AFTER_SEQUENCE_NUMBER with
+    # commitNum=0, and seeding 1/1 would skip the first operation.
+    #
+    if commit_num == 0 and op_num == 0:
+
+        params = {
+            "iteratorType": "TRIM_HORIZON",
+            "limit": BATCH_SIZE,
+        }
+
+    else:
+
+        params = {
+            "iteratorType": "AFTER_SEQUENCE_NUMBER",
+            "commitNum": commit_num,
+            "opNum": op_num,
+            "limit": BATCH_SIZE,
+        }
 
     response = requests.get(
         _stream_url(),
