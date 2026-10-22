@@ -20,10 +20,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Serves the HTML error pages in {@code error-pages/} (4xx.html / 5xx.html) to
- * browsers in place of Spring Boot's Whitelabel page, with {@code {{status}}}
- * replaced by the response's status code. Non-HTML clients still get Spring
- * Boot's JSON error response.
+ * Serves the HTML error pages in {@code error-pages/} (403.html / 4xx.html /
+ * 5xx.html) to browsers in place of Spring Boot's Whitelabel page, with
+ * {@code {{status}}} replaced by the response's status code and
+ * {@code {{contextPath}}} by the application's context path. Non-HTML clients
+ * still get Spring Boot's JSON error response.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -34,8 +35,12 @@ public class ErrorPageViewResolver implements ErrorViewResolver
   @Override
   public ModelAndView resolveErrorView(HttpServletRequest request, HttpStatus status, Map<String, Object> model)
   {
-    String name = status.is5xxServerError() ? "5xx" : "4xx";
-    String html = this.getTemplate(name).replace("{{status}}", String.valueOf(status.value()));
+    // Every route only requires a login, so a 403 means the session (and its
+    // CSRF token) was lost; that page links back to the login form
+    String name = status == HttpStatus.FORBIDDEN ? "403" : status.is5xxServerError() ? "5xx" : "4xx";
+    String html = this.getTemplate(name) //
+        .replace("{{status}}", String.valueOf(status.value())) //
+        .replace("{{contextPath}}", request.getContextPath());
 
     View view = new View()
     {

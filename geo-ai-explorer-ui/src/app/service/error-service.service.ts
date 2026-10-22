@@ -7,6 +7,8 @@ import { MessageService } from 'primeng/api';
 })
 export class ErrorService {
 
+  private sessionExpiredShown = false;
+
   constructor(private messageService: MessageService) {
   }
 
@@ -20,6 +22,22 @@ export class ErrorService {
         detail: 'Unable to communicate with the server',
         sticky: true
       })
+    }
+    else if (response.status === 403) {
+      // Every endpoint only requires a login, so a 403 means the session (and
+      // its CSRF token) is gone. Show this once instead of once per request.
+      if (!this.sessionExpiredShown) {
+        this.sessionExpiredShown = true;
+
+        this.messageService.add({
+          key: 'session',
+          severity: 'warn',
+          summary: 'Session expired',
+          detail: 'Your session has expired. Please log in again.',
+          sticky: true,
+          closable: false
+        })
+      }
     }
     else if (response.status === 400 || response.status === 500) {
 
