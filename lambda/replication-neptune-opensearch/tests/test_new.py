@@ -583,7 +583,67 @@ def _label_binding(uri, label):
     }
 
 
+class TestFetchStream:
+
+    def test_zero_checkpoint_reads_from_trim_horizon(self, neptune, http_mock):
+        http_mock.get_queue = [FakeResponse(json_data={"records": []})]
+
+        neptune._fetch_stream(0, 0)
+
+        _, kwargs = http_mock.calls["get"][0]
+        assert kwargs["params"]["iteratorType"] == "TRIM_HORIZON"
+        assert "commitNum" not in kwargs["params"]
+        assert "opNum" not in kwargs["params"]
+
+    def test_nonzero_checkpoint_reads_after_sequence_number(
+        self, neptune, http_mock
+    ):
+        http_mock.get_queue = [FakeResponse(json_data={"records": []})]
+
+        neptune._fetch_stream(5, 10)
+
+        _, kwargs = http_mock.calls["get"][0]
+        assert kwargs["params"]["iteratorType"] == "AFTER_SEQUENCE_NUMBER"
+        assert kwargs["params"]["commitNum"] == 5
+        assert kwargs["params"]["opNum"] == 10
+
+
 class TestLambdaHandlerEndToEnd:
+
+    def test_zero_checkpoint_processes_from_start_and_advances(
+        self, neptune, http_mock
+    ):
+        neptune._write_checkpoint(commit_num=0, op_num=0)
+
+        stream_page = {
+            "records": [
+                {
+                    "data": {
+                        "stmt": (
+                            "<http://example.org/geomOnly> "
+                            "<http://www.opengis.net/ont/geosparql#asWKT> "
+                            '"POINT(0 0)" .'
+                        )
+                    }
+                },
+            ],
+            "lastEventId": {"commitNum": 1, "opNum": 1},
+        }
+
+        http_mock.get_queue = [
+            FakeResponse(json_data=stream_page),
+            FakeResponse(json_data={"records": []}),
+        ]
+
+        neptune.lambda_handler({}, FakeLambdaContext())
+
+        params = [kwargs["params"] for _, kwargs in http_mock.calls["get"]]
+        assert params[0]["iteratorType"] == "TRIM_HORIZON"
+        assert params[1]["iteratorType"] == "AFTER_SEQUENCE_NUMBER"
+        assert (params[1]["commitNum"], params[1]["opNum"]) == (1, 1)
+
+        checkpoint = neptune._read_checkpoint()
+        assert (int(checkpoint["commitNum"]), int(checkpoint["opNum"])) == (1, 1)
 
     def test_raises_when_no_checkpoint_initialized(self, neptune, http_mock):
         with pytest.raises(RuntimeError, match="No Neptune stream checkpoint"):
