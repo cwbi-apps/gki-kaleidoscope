@@ -634,6 +634,11 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         return this.currentSavedQueryValue;
     }
 
+    reloadPage(): void {
+        // The server redirects to the login form, then back here after login
+        window.location.reload();
+    }
+
     openSaveQueryDialog(): void {
         if (!this.currentPageCacheId) {
             return;

@@ -11,6 +11,20 @@
 
   <p-toast position="top-center" key="explorer" />
 
+  <p-toast position="top-center" key="session">
+    <ng-template let-message #message>
+      <div class="session-toast">
+        <div class="session-toast-summary">{{ message.summary }}</div>
+        <div>{{ message.detail }}</div>
+        <p-button
+          label="Log in"
+          size="small"
+          (onClick)="reloadPage()">
+        </p-button>
+      </div>
+    </ng-template>
+  </p-toast>
+
   <p-dialog
     header="Save Query"
     [(visible)]="saveQueryDialogVisible"
