@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,6 +16,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.access.AccessDeniedHandlerImpl;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
@@ -72,9 +74,15 @@ public class ProductionSecurityConfig
     // explicit fallback matters: with a single mapping Spring Security applies
     // that handler to every request, which would redirect rejected API calls
     // to the login form instead of returning 403.
+    //
+    // API calls without a valid session get a plain 401 rather than a
+    // redirect to the login page, which the UI can't follow. The UI reports a
+    // 401 as an expired session, distinct from a 403 (e.g. a request blocked
+    // by a web application firewall in front of the app).
     http.exceptionHandling(ex -> ex //
         .defaultAccessDeniedHandlerFor(loginCsrfHandler(), PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/login")) //
-        .defaultAccessDeniedHandlerFor(new AccessDeniedHandlerImpl(), AnyRequestMatcher.INSTANCE));
+        .defaultAccessDeniedHandlerFor(new AccessDeniedHandlerImpl(), AnyRequestMatcher.INSTANCE) //
+        .defaultAuthenticationEntryPointFor(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), PathPatternRequestMatcher.withDefaults().matcher("/api/**")));
 
     return http.build();
   }

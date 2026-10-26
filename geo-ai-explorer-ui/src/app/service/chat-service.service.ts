@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -56,11 +56,10 @@ export class ChatService {
     }
     else
     {
-      let params = new HttpParams();
-      params = params.append("sessionId", sessionId);
-      params = params.append("prompt", message.text);
+      // Sent in the body so long prompts aren't limited by URL length
+      const params = { sessionId: sessionId, prompt: message.text };
 
-      return firstValueFrom(this.http.get<JobStartResponse>(apiBase() + 'api/chat/prompt/start', { params }))
+      return firstValueFrom(this.http.post<JobStartResponse>(apiBase() + 'api/chat/prompt/start', params))
         .then(({ jobId }) => {
           const statusUrl = apiBase() + 'api/chat/prompt/status/' + jobId;
           onJobStarted?.(statusUrl);

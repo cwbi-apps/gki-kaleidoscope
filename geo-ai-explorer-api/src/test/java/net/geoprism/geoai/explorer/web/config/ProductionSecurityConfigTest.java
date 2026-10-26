@@ -3,6 +3,7 @@ package net.geoprism.geoai.explorer.web.config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -110,6 +111,58 @@ public class ProductionSecurityConfigTest
 
     assertEquals(302, result.getResponse().getStatus());
     assertEquals("/login?error", result.getResponse().getRedirectedUrl());
+  }
+
+  @Test
+  public void testApiWithoutSessionReturns401() throws Exception
+  {
+    // The Accept header Angular's HttpClient sends
+    MvcResult result = this.mockMvc.perform(get("/api/configuration/get").accept("application/json, text/plain, */*")).andReturn();
+
+    assertEquals(401, result.getResponse().getStatus());
+
+    // A Basic challenge would make the browser show its own login dialog
+    assertNull(result.getResponse().getHeader("WWW-Authenticate"));
+  }
+
+  @Test
+  public void testApiPostWithExpiredSessionReturns401() throws Exception
+  {
+    // The XSRF-TOKEN cookie outlives the session, so the CSRF check passes and
+    // the request fails authentication instead
+    Browser browser = new Browser();
+    browser.perform(get("/login"));
+
+    Cookie xsrf = browser.cookies.get("XSRF-TOKEN");
+
+    browser.perform(post("/api/chat/prompt/start").header("X-XSRF-TOKEN", xsrf.getValue()).contentType(MediaType.APPLICATION_JSON).content("{\"sessionId\":\"s1\",\"prompt\":\"hello\"}"));
+
+    assertEquals(401, browser.status);
+  }
+
+  @Test
+  public void testPageWithoutSessionRedirectsToLogin() throws Exception
+  {
+    MvcResult result = this.mockMvc.perform(get("/").accept(MediaType.TEXT_HTML)).andReturn();
+
+    assertEquals(302, result.getResponse().getStatus());
+    assertTrue(result.getResponse().getRedirectedUrl().endsWith("/login"));
+  }
+
+  @Test
+  public void testPromptIsSentInPostBody() throws Exception
+  {
+    Browser browser = new Browser();
+    browser.login();
+
+    // Well beyond what fits in a URL
+    String prompt = "Run this SPARQL query: SELECT ?s ?p ?o WHERE { ?s ?p ?o } " + "x".repeat(20_000);
+    String body = "{\"sessionId\":\"s1\",\"prompt\":\"" + prompt + "\"}";
+
+    browser.perform(post("/api/chat/prompt/start").header("X-XSRF-TOKEN", browser.cookies.get("XSRF-TOKEN").getValue()).contentType(MediaType.APPLICATION_JSON).content(body));
+
+    assertEquals(202, browser.status);
+    assertTrue(browser.body.contains("jobId"));
   }
 
   /**
