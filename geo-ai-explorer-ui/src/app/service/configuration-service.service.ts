@@ -34,8 +34,6 @@ export class ConfigurationService {
       return firstValueFrom(this.http.get<Configuration>(apiBase() + 'api/configuration/get')).then(configuration => {
         configuration.layers.map(l => l.id = uuidv4())
 
-        localStorage.setItem('token', configuration.token);
-        
         return configuration;
       });
     // }

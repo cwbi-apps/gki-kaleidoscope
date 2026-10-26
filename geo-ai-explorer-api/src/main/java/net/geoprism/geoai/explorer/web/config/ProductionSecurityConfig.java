@@ -19,6 +19,7 @@ import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
 import jakarta.servlet.DispatcherType;
@@ -45,6 +46,12 @@ public class ProductionSecurityConfig
     http.formLogin(form -> form.permitAll());
     http.httpBasic(Customizer.withDefaults());
 
+    // Send the CSRF token to the UI as an XSRF-TOKEN cookie, which the UI
+    // echoes back in the X-XSRF-TOKEN header. The browser keeps the cookie in
+    // sync with the server (e.g. when the token rotates on login), so the UI
+    // never holds a stale copy.
+    http.csrf(csrf -> csrf.spa());
+
     // Only remember page navigations as the post-login destination. By default
     // any non-JSON GET qualifies, so background requests (Chrome DevTools'
     // /.well-known/... probe, map tiles) could overwrite the page the user
@@ -61,9 +68,13 @@ public class ProductionSecurityConfig
     // A login POST whose CSRF token doesn't match the session (the session
     // expired, the server restarted, or the request reached a different
     // instance) would otherwise render the 403 error page. Send the user back
-    // to the login form instead, which issues a fresh session and token.
-    http.exceptionHandling(ex -> ex.defaultAccessDeniedHandlerFor(loginCsrfHandler(), //
-        PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/login")));
+    // to the login form instead, which issues a fresh session and token. The
+    // explicit fallback matters: with a single mapping Spring Security applies
+    // that handler to every request, which would redirect rejected API calls
+    // to the login form instead of returning 403.
+    http.exceptionHandling(ex -> ex //
+        .defaultAccessDeniedHandlerFor(loginCsrfHandler(), PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/login")) //
+        .defaultAccessDeniedHandlerFor(new AccessDeniedHandlerImpl(), AnyRequestMatcher.INSTANCE));
 
     return http.build();
   }
