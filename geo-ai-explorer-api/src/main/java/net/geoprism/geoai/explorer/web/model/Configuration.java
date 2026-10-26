@@ -14,6 +14,4 @@ public class Configuration
 
   private List<VectorLayer>  layers;
 
-  private String             token;
-
 }

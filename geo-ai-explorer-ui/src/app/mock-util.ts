@@ -415,7 +415,6 @@ As well as numerous census tracts, real properties, and other infrastructure.`, 
 
   public static styles: Configuration = {
     layers: [],
-    token: "",
     styles: {
       "https://localhost:4200/lpg/graph_801104/0#RealProperty": {
         "color": "#79F294",

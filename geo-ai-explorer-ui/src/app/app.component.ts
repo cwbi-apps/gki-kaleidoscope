@@ -6,6 +6,7 @@ import { Store } from '@ngrx/store';
 import { Subscription } from 'rxjs';
 
 import { getWorkflowStep, WorkflowStep } from './state/explorer.state';
+import { checkLocalStorage, StorageCheckResult } from './service/storage-check.util';
 
 @Component({
     selector: 'app-root',
@@ -18,11 +19,14 @@ export class AppComponent implements OnDestroy {
     private readonly storageKey = 'geo-ai-explorer-theme';
     private readonly systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
     private readonly onSystemThemeChange = (event: MediaQueryListEvent): void => {
-        if (!localStorage.getItem(this.storageKey)) {
+        if (!this.storageCheck.ok || !localStorage.getItem(this.storageKey)) {
             this.setDarkMode(event.matches);
         }
     };
     private readonly onWorkflowStepChange: Subscription;
+
+    // Checked first so the error banner can still render if localStorage throws
+    readonly storageCheck: StorageCheckResult = checkLocalStorage();
 
     isDarkMode = document.documentElement.classList.contains('app-dark');
 
@@ -31,7 +35,7 @@ export class AppComponent implements OnDestroy {
     isChatOnlyView = true;
 
     constructor() {
-        const savedTheme = localStorage.getItem(this.storageKey);
+        const savedTheme = this.storageCheck.ok ? localStorage.getItem(this.storageKey) : null;
         this.setDarkMode(savedTheme ? savedTheme === 'dark' : this.systemTheme.matches);
         this.systemTheme.addEventListener('change', this.onSystemThemeChange);
 
@@ -42,7 +46,10 @@ export class AppComponent implements OnDestroy {
 
     toggleTheme(): void {
         this.setDarkMode(!this.isDarkMode);
-        localStorage.setItem(this.storageKey, this.isDarkMode ? 'dark' : 'light');
+
+        if (this.storageCheck.ok) {
+            localStorage.setItem(this.storageKey, this.isDarkMode ? 'dark' : 'light');
+        }
     }
 
     ngOnDestroy(): void {

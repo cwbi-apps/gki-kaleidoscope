@@ -22,7 +22,6 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -42,16 +41,11 @@ public class ConfigurationController
 
   @GetMapping("/api/configuration/get")
   @ResponseBody
-  public ResponseEntity<Configuration> getConfiguration(CsrfToken token) throws IOException
+  public ResponseEntity<Configuration> getConfiguration() throws IOException
   {
     Configuration configuration = new Configuration();
     configuration.setStyles(this.service.getStyles());
     configuration.setLayers(this.service.getVectorLayers());
-
-    if (token != null)
-    {
-      configuration.setToken(token.getToken());
-    }
 
     return new ResponseEntity<Configuration>(configuration, HttpStatus.OK);
   }

@@ -1,5 +1,7 @@
 
-<router-outlet />
+<div class="app-content">
+  <router-outlet />
+</div>
 
 @if (isChatOnlyView) {
   <button
@@ -21,4 +23,22 @@
       </svg>
     }
   </button>
+}
+
+@if (!storageCheck.ok) {
+  <details class="storage-error" role="alert">
+    <summary>
+      <strong>Browser storage is unavailable.</strong>
+      Chat history won't be saved and will be lost on refresh.
+      <span class="storage-error-toggle">Details</span>
+    </summary>
+    <div class="storage-error-more">
+      <div>This is usually caused by browser privacy settings or an organizational policy that blocks site data.</div>
+      <ul>
+        @for (detail of storageCheck.details; track $index) {
+          <li>{{ detail }}</li>
+        }
+      </ul>
+    </div>
+  </details>
 }
