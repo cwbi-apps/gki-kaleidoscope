@@ -29,7 +29,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,6 +37,7 @@ import net.geoprism.geoai.explorer.core.model.JobStatusResponse;
 import net.geoprism.geoai.explorer.core.model.LocationPage;
 import net.geoprism.geoai.explorer.core.model.Message;
 import net.geoprism.geoai.explorer.core.model.PageRequest;
+import net.geoprism.geoai.explorer.core.model.PromptRequest;
 import net.geoprism.geoai.explorer.core.service.AsyncJobService;
 import net.geoprism.geoai.explorer.core.service.ChatService;
 
@@ -51,11 +51,11 @@ public class ChatController
   @Autowired
   private AsyncJobService jobs;
 
-  @GetMapping("/api/chat/prompt")
+  @PostMapping("/api/chat/prompt")
   @ResponseBody
-  public ResponseEntity<Message> prompt(@RequestParam(name = "sessionId") String sessionId, @RequestParam(name = "prompt") String prompt)
+  public ResponseEntity<Message> prompt(@RequestBody PromptRequest request)
   {
-    Message response = this.service.prompt(sessionId, prompt);
+    Message response = this.service.prompt(request.getSessionId(), request.getPrompt());
 
     return new ResponseEntity<Message>(response, HttpStatus.OK);
   }
@@ -68,11 +68,11 @@ public class ChatController
    * work off in the background (see AsyncJobService) and immediately hands
    * the caller a job id to poll via promptStatus() below.
    */
-  @GetMapping("/api/chat/prompt/start")
+  @PostMapping("/api/chat/prompt/start")
   @ResponseBody
-  public ResponseEntity<Map<String, String>> startPrompt(@RequestParam(name = "sessionId") String sessionId, @RequestParam(name = "prompt") String prompt)
+  public ResponseEntity<Map<String, String>> startPrompt(@RequestBody PromptRequest request)
   {
-    String jobId = this.jobs.submit(() -> this.service.prompt(sessionId, prompt));
+    String jobId = this.jobs.submit(() -> this.service.prompt(request.getSessionId(), request.getPrompt()));
 
     return new ResponseEntity<Map<String, String>>(Map.of("jobId", jobId), HttpStatus.ACCEPTED);
   }

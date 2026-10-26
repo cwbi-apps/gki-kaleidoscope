@@ -23,9 +23,9 @@ export class ErrorService {
         sticky: true
       })
     }
-    else if (response.status === 403) {
-      // Every endpoint only requires a login, so a 403 means the session (and
-      // its CSRF token) is gone. Show this once instead of once per request.
+    else if (response.status === 401) {
+      // The server returns 401 for API calls without a valid session. Show
+      // this once instead of once per request.
       if (!this.sessionExpiredShown) {
         this.sessionExpiredShown = true;
 
@@ -38,6 +38,18 @@ export class ErrorService {
           closable: false
         })
       }
+    }
+    else if (response.status === 403) {
+      // Not a login problem (that's a 401). Usually a web application firewall
+      // in front of the app rejecting the request's content, e.g. query text
+      // such as SQL or SPARQL in a chat message.
+      this.messageService.add({
+        key: 'explorer',
+        severity: 'error',
+        summary: 'Request blocked',
+        detail: 'This request was blocked by a network security filter. If your message includes query or code text (e.g. SQL or SPARQL), try rephrasing it. If the problem continues, contact your administrator.',
+        sticky: true
+      })
     }
     else if (response.status === 400 || response.status === 500) {
 
