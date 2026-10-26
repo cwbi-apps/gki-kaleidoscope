@@ -2,6 +2,8 @@ package net.geoprism.geoai.explorer.web.config;
 
 import java.util.Set;
 
+import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
+import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -32,10 +34,13 @@ public class ProductionSecurityConfig
   {
     // Same as Spring Boot's default chain, except the error page is public so
     // a rejected request renders an error instead of redirecting to the login
-    // page (which can loop).
+    // page (which can loop). Defining this chain also disables Boot's default
+    // actuator chain, so the health endpoint must be opened here for
+    // unauthenticated load balancer health checks.
     http.authorizeHttpRequests(auth -> auth //
         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll() //
         .requestMatchers("/error").permitAll() //
+        .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll() //
         .anyRequest().authenticated());
     http.formLogin(form -> form.permitAll());
     http.httpBasic(Customizer.withDefaults());
