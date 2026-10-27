@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AttributePanelComponent } from './attribute-panel.component';
+import { provideTestApp } from '../testing/test-providers';
 
 describe('AttributePanelComponent', () => {
   let component: AttributePanelComponent;
@@ -8,7 +9,8 @@ describe('AttributePanelComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AttributePanelComponent]
+      imports: [AttributePanelComponent],
+      providers: provideTestApp()
     })
     .compileComponents();
     

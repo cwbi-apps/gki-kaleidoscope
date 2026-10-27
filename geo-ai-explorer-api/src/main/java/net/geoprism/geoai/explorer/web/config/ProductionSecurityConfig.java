@@ -23,6 +23,7 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 import org.springframework.security.web.util.matcher.AndRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 
 import jakarta.servlet.DispatcherType;
 
@@ -58,12 +59,18 @@ public class ProductionSecurityConfig
     // any non-JSON GET qualifies, so background requests (Chrome DevTools'
     // /.well-known/... probe, map tiles) could overwrite the page the user
     // asked for and send them to a 404 after logging in.
+    //
+    // The login page itself is never remembered. It only renders at /login,
+    // /login?error and /login?logout; any other login URL (e.g. one the
+    // browser autocompletes from history) requires authentication, and
+    // returning to it after logging in would 404.
     MediaTypeRequestMatcher html = new MediaTypeRequestMatcher(MediaType.TEXT_HTML);
     html.setIgnoredMediaTypes(Set.of(MediaType.ALL));
 
     HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
     requestCache.setRequestMatcher(new AndRequestMatcher( //
-        PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, "/**"), html));
+        PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, "/**"), html, //
+        new NegatedRequestMatcher(PathPatternRequestMatcher.withDefaults().matcher("/login"))));
 
     http.requestCache(cache -> cache.requestCache(requestCache));
 

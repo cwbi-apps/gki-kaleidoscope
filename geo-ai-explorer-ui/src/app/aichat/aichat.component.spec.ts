@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AichatComponent } from './aichat.component';
+import { provideTestApp } from '../testing/test-providers';
 
 describe('AichatComponent', () => {
   let component: AichatComponent;
@@ -8,7 +9,8 @@ describe('AichatComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AichatComponent]
+      imports: [AichatComponent],
+      providers: provideTestApp()
     })
     .compileComponents();
     

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ExplorerComponent, } from '../explorer/explorer.component';
+import { GEO_FEATURE, GEO_WKT_LITERAL } from '../util/rdf.util';
 import { parse, GeoJSONGeometry } from 'wellknown';
 import { GeoObject } from '../models/geoobject.model';
 import { MockUtil } from '../mock-util';
@@ -98,11 +98,11 @@ export class ExplorerService {
             let v = rs.head.vars[i];
             if (r[v] == null) continue;
 
-            if (r[v].type === "uri" && r[v].value === ExplorerComponent.GEO_FEATURE) {
+            if (r[v].type === "uri" && r[v].value === GEO_FEATURE) {
                 lastReadUri = null;
                 readGeoObjectUri = false;
             } else {
-                if (i > 0 && r[v].type === "uri" && r[rs.head.vars[i-1]].value === ExplorerComponent.GEO_FEATURE) {
+                if (i > 0 && r[v].type === "uri" && r[rs.head.vars[i-1]].value === GEO_FEATURE) {
                     let uri = r[rs.head.vars[i+1]].value;
 
                     geoObject = geoObjects.find(go => go.properties.uri === uri);
@@ -121,7 +121,7 @@ export class ExplorerService {
                     i++;
                 } else if (geoObject == null) {
                     throw new Error("Attempt to read property without associated geo feature. Does your query start with a geo:feature declaration?");
-                } else if (r[v].type === "literal" && r[v].datatype === ExplorerComponent.GEO_WKT_LITERAL) {
+                } else if (r[v].type === "literal" && r[v].datatype === GEO_WKT_LITERAL) {
                     geoObject.geometry = this.wktToGeometry(r[v].value);
                 } else if (r[v].type === "literal") {
                     geoObject.properties.label = r[v].value;

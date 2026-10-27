@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideMockStore } from '@ngrx/store/testing';
 
@@ -11,7 +13,11 @@ describe('AppComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [provideMockStore({ selectors: [{ selector: getWorkflowStep, value: WorkflowStep.FullScreenChat }] })],
+      providers: [
+        provideMockStore({ selectors: [{ selector: getWorkflowStep, value: WorkflowStep.FullScreenChat }] }),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
     }).compileComponents();
   });
 
@@ -51,5 +57,36 @@ describe('AppComponent', () => {
     expect(banner).not.toBeNull();
     expect(banner.textContent).toContain('Browser storage is unavailable');
     expect(banner.textContent).toContain('The quota has been exceeded.');
+  });
+
+  it('should post to logout and then go to the login page', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const navigate = spyOn(app, 'navigate');
+    const http = TestBed.inject(HttpTestingController);
+
+    app.logout();
+
+    const req = http.expectOne(request => request.url.endsWith('/logout'));
+    expect(req.request.method).toBe('POST');
+    expect(navigate).not.toHaveBeenCalled();
+
+    req.flush('');
+
+    expect(navigate).toHaveBeenCalledWith(jasmine.stringMatching(/\/login\?logout$/));
+    http.verify();
+  });
+
+  it('should go to the login page even if the logout is rejected', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const navigate = spyOn(app, 'navigate');
+    const http = TestBed.inject(HttpTestingController);
+
+    app.logout();
+
+    http.expectOne(request => request.url.endsWith('/logout')).flush('', { status: 403, statusText: 'Forbidden' });
+
+    expect(navigate).toHaveBeenCalledWith(jasmine.stringMatching(/\/login\?logout$/));
   });
 });

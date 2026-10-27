@@ -1,5 +1,6 @@
 
 import { Component, inject, OnDestroy } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { RouterOutlet } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
 import { Store } from '@ngrx/store';
@@ -7,6 +8,7 @@ import { Subscription } from 'rxjs';
 
 import { getWorkflowStep, WorkflowStep } from './state/explorer.state';
 import { checkLocalStorage, StorageCheckResult } from './service/storage-check.util';
+import { apiBase } from './service/url.util';
 
 @Component({
     selector: 'app-root',
@@ -16,6 +18,7 @@ import { checkLocalStorage, StorageCheckResult } from './service/storage-check.u
 })
 export class AppComponent implements OnDestroy {
     private readonly store = inject(Store);
+    private readonly http = inject(HttpClient);
     private readonly storageKey = 'geo-ai-explorer-theme';
     private readonly systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
     private readonly onSystemThemeChange = (event: MediaQueryListEvent): void => {
@@ -30,7 +33,7 @@ export class AppComponent implements OnDestroy {
 
     isDarkMode = document.documentElement.classList.contains('app-dark');
 
-    // The theme toggle is only shown on the chat-only views (full-screen chat
+    // The theme toggle and logout button are only shown on the chat-only views (full-screen chat
     // / chat + results). It's hidden everywhere the map is visible.
     isChatOnlyView = true;
 
@@ -50,6 +53,20 @@ export class AppComponent implements OnDestroy {
         if (this.storageCheck.ok) {
             localStorage.setItem(this.storageKey, this.isDarkMode ? 'dark' : 'light');
         }
+    }
+
+    logout(): void {
+        // Spring Security only logs out on a POST to /logout carrying the CSRF
+        // token. HttpClient sends it as a header (see authInterceptor). Go to the
+        // login page either way: if the session already expired the logout is
+        // rejected, but the user is logged out regardless.
+        const toLogin = (): void => this.navigate(apiBase() + 'login?logout');
+
+        this.http.post(apiBase() + 'logout', null, { responseType: 'text' }).subscribe({ next: toLogin, error: toLogin });
+    }
+
+    navigate(url: string): void {
+        window.location.assign(url);
     }
 
     ngOnDestroy(): void {
