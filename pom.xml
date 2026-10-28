@@ -8,6 +8,7 @@
 
   <name>Geo AI Explorer</name>
   <description>Geo AI Explorer</description>
+  <inceptionYear>2025</inceptionYear>
 
   <modules>
     <module>geo-ai-explorer-ui</module>    
@@ -71,10 +72,91 @@
     </repository>
   </repositories>
 
+  <build>
+    <plugins>
+      <!-- Applies license headers to source files. Run from the root with: mvn license:format -->
+      <plugin>
+        <groupId>com.mycila</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <version>5.0.0</version>
+        <configuration>
+          <licenseSets>
+            <licenseSet>
+              <header>${maven.multiModuleProjectDirectory}/LICENSE_HEADER</header>
+              <includes>
+                <include>**/*.java</include>
+                <include>**/*.ts</include>
+                <include>**/*.scss</include>
+                <include>**/*.py</include>
+              </includes>
+              <excludes>
+                <exclude>**/target/**</exclude>
+                <exclude>**/node_modules/**</exclude>
+                <exclude>**/node/**</exclude>
+                <exclude>**/dist/**</exclude>
+                <exclude>**/.angular/**</exclude>
+                <exclude>**/__pycache__/**</exclude>
+              </excludes>
+            </licenseSet>
+          </licenseSets>
+          <mapping>
+            <ts>SLASHSTAR_STYLE</ts>
+          </mapping>
+          <!-- Leave files that already carry a copyright notice (e.g. third-party code) untouched -->
+          <skipExistingHeaders>true</skipExistingHeaders>
+          <properties>
+            <year>${project.inceptionYear}</year>
+            <holder>TerraFrame</holder>
+          </properties>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
+      <!-- Generates release notes from conventional commits. Used by .github/workflows/release.yml -->
+      <plugin>
+        <groupId>se.bjurr.gitchangelog</groupId>
+        <artifactId>git-changelog-maven-plugin</artifactId>
+        <version>2.2.11</version>
+        <inherited>false</inherited>
+        <configuration>
+          <file>target/CHANGELOG-release.md</file>
+          <useIntegrations>false</useIntegrations>
+          <templateContent>
+{{#tags}}
+{{#ifMatches name "^${project.version}$"}}
+## [{{name}}](https://github.com/terraframe/geo-ai-explorer/releases/tag/{{name}}) ({{tagDate .}})
+
+  {{#ifContainsType commits type='feat'}}
+### Features
+
+    {{#commits}}
+      {{#ifCommitType . type='feat'}}
+ - {{#ifCommitBreaking .}}**BREAKING CHANGE** {{/ifCommitBreaking}}{{#eachCommitScope .}}**{{.}}** {{/eachCommitScope}}{{{commitDescription .}}} ([{{subString hash 0 5}}](https://github.com/terraframe/geo-ai-explorer/commit/{{hashFull}}))
+      {{/ifCommitType}}
+    {{/commits}}
+  {{/ifContainsType}}
+
+  {{#ifContainsType commits type='fix'}}
+### Bug Fixes
+
+    {{#commits}}
+      {{#ifCommitType . type='fix'}}
+ - {{#ifCommitBreaking .}}**BREAKING CHANGE** {{/ifCommitBreaking}}{{#eachCommitScope .}}**{{.}}** {{/eachCommitScope}}{{{commitDescription .}}} ([{{subString hash 0 5}}](https://github.com/terraframe/geo-ai-explorer/commit/{{hashFull}}))
+      {{/ifCommitType}}
+    {{/commits}}
+  {{/ifContainsType}}
+
+{{/ifMatches}}
+{{/tags}}
+          </templateContent>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
   <scm>
-    <connection>scm:git:ssh://git@github.com/terraframe/geoprism-llm</connection>
-    <developerConnection>scm:git:ssh://git@github.com/terraframe/geoprism-llm</developerConnection>
-    <url>scm:git:ssh://git@github.com/terraframe/geoprism-llm</url>
-    <tag>0.0.1</tag>
+    <connection>scm:git:ssh://git@github.com/terraframe/geo-ai-explorer</connection>
+    <developerConnection>scm:git:ssh://git@github.com/terraframe/geo-ai-explorer</developerConnection>
+    <url>scm:git:ssh://git@github.com/terraframe/geo-ai-explorer</url>
+    <tag>HEAD</tag>
   </scm>
 </project>
