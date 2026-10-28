@@ -32,6 +32,7 @@ import {
   WorkflowStep
 } from '../state/explorer.state';
 import { ExplorerService } from '../service/explorer.service';
+import { Meta } from '@angular/platform-browser';
 import { GeoObject } from '../models/geoobject.model';
 import { CachedExplorerPages, ExplorerSessionStateService } from '../service/explorer-session-state.service';
 
@@ -114,6 +115,9 @@ export class AichatComponent {
   public editingSavedQueryId: string | null = null;
   public editingSavedQueryTitle = '';
   public sidebarWidthPx = this.loadSidebarWidth();
+  // Rendered into index.html by the server (IndexHtmlController). Absent under `ng serve`.
+  public appVersion: string | null = null;
+  public appBuildTime: string | null = null;
   private resizingSidebar = false;
   private markdownCache = new Map<string, string>();
   private savedQueryIndexById = new Map<string, number>();
@@ -141,9 +145,14 @@ export class AichatComponent {
     private errorService: ErrorService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
-    private explorerSessionState: ExplorerSessionStateService
+    private explorerSessionState: ExplorerSessionStateService,
+    private meta: Meta
   ) {
     this.savedQueries$ = this.explorerSessionState.savedQueries$;
+
+    const versionTag = this.meta.getTag('name="app-version"');
+    this.appVersion = versionTag?.content || null;
+    this.appBuildTime = versionTag?.dataset['buildTime'] || null;
     this.activeSidebarTab = this.loadActiveSidebarTab();
     this.onSavedQueriesChange = this.savedQueries$.subscribe(savedQueries => {
       this.savedQueryIndexById = new Map(savedQueries.map((query, index) => [query.id, index + 1]));

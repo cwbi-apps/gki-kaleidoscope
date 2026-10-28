@@ -157,6 +157,13 @@
         }
         <p class="sidebar-storage-note">
           Chat history and saved queries are stored in your browser's local storage.
+          @if (appVersion) {
+            <span
+              class="sidebar-version"
+              [title]="appBuildTime ? 'Built ' + (appBuildTime | date: 'medium') : ''">
+              v{{ appVersion }}
+            </span>
+          }
         </p>
       </aside>
     }
