@@ -30,6 +30,7 @@ import { debounce } from 'lodash';
 import { VectorLayer } from '../models/vector-layer.model';
 import { environment } from '../../environments/environment';
 import { apiBase } from '../service/url.util';
+import { uriToLabel } from '../util/rdf.util';
 import { faAnglesLeft, faAnglesRight, faArrowLeft, faArrowRight, faDownLeftAndUpRightToCenter, faFloppyDisk, faShareNodes, faUpRightAndDownLeftFromCenter } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ButtonModule } from 'primeng/button';
@@ -87,12 +88,6 @@ export class ExplorerComponent implements OnInit, OnDestroy {
     public hideAttributesIcon = faAnglesLeft;
     public showAttributesIcon = faAnglesRight;
     public relationshipIcon = faShareNodes;
-
-    public static GEO = "http://www.opengis.net/ont/geosparql#";
-
-    public static GEO_FEATURE = ExplorerComponent.GEO + "Feature";
-
-    public static GEO_WKT_LITERAL = ExplorerComponent.GEO + "wktLiteral";
 
     private store = inject(Store);
 
@@ -1189,15 +1184,8 @@ export class ExplorerComponent implements OnInit, OnDestroy {
         if (this.resolvedStyles && this.resolvedStyles[typeUri] && this.resolvedStyles[typeUri].label) {
             return this.resolvedStyles[typeUri].label as string;
         } else {
-            return ExplorerComponent.uriToLabel(typeUri);
+            return uriToLabel(typeUri);
         }
-    }
-
-    public static uriToLabel(uri: string): string {
-        let i = uri.lastIndexOf("#");
-        if (i == -1) return uri;
-
-        return uri.substring(i + 1);
     }
 
     getTypeLegend() { return this.typeLegend; }

@@ -6,6 +6,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -39,6 +41,14 @@ public class IndexHtmlController
 
   private volatile String      template;
 
+  // Only available when the spring-boot-maven-plugin generated META-INF/build-info.properties
+  private final ObjectProvider<BuildProperties> buildProperties;
+
+  public IndexHtmlController(ObjectProvider<BuildProperties> buildProperties)
+  {
+    this.buildProperties = buildProperties;
+  }
+
   @GetMapping(value = { "/", "/index.html" }, produces = MediaType.TEXT_HTML_VALUE)
   public ResponseEntity<String> index(HttpServletRequest request) throws IOException
   {
@@ -52,23 +62,41 @@ public class IndexHtmlController
 
     // Context path is "" for the root context, otherwise "/kaleidoscope" (no trailing slash)
     String baseHref = request.getContextPath() + "/";
-    String baseTag = "<base href=\"" + HtmlUtils.htmlEscape(baseHref) + "\">";
+    String headTags = "<base href=\"" + HtmlUtils.htmlEscape(baseHref) + "\">" + this.getVersionTag();
 
     Matcher matcher = BASE_HREF.matcher(html);
 
     if (matcher.find())
     {
-      html = matcher.replaceFirst(Matcher.quoteReplacement(baseTag));
+      html = matcher.replaceFirst(Matcher.quoteReplacement(headTags));
     }
     else
     {
-      html = html.replaceFirst("(?i)<head>", Matcher.quoteReplacement("<head>" + baseTag));
+      html = html.replaceFirst("(?i)<head>", Matcher.quoteReplacement("<head>" + headTags));
     }
 
     return ResponseEntity.ok() //
         .cacheControl(CacheControl.noCache()) //
         .contentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8)) //
         .body(html);
+  }
+
+  /**
+   * The app version is rendered into the page so the UI can display it without
+   * an extra request. Read on the client by AichatComponent.
+   */
+  private String getVersionTag()
+  {
+    BuildProperties properties = this.buildProperties.getIfAvailable();
+
+    if (properties == null)
+    {
+      return "";
+    }
+
+    String buildTime = properties.getTime() != null ? properties.getTime().toString() : "";
+
+    return "<meta name=\"app-version\" content=\"" + HtmlUtils.htmlEscape(properties.getVersion()) + "\" data-build-time=\"" + HtmlUtils.htmlEscape(buildTime) + "\">";
   }
 
   private String getTemplate() throws IOException

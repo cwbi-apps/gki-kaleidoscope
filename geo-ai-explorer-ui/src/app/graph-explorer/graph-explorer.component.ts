@@ -1,5 +1,6 @@
 import { AfterViewInit, Component, ElementRef, inject, Input, OnDestroy, ViewChild } from '@angular/core';
-import { ExplorerComponent, TypeLegend } from '../explorer/explorer.component';
+import type { ExplorerComponent, TypeLegend } from '../explorer/explorer.component';
+import { uriToLabel } from '../util/rdf.util';
 import { CommonModule } from '@angular/common';
 import { Edge, Node, GraphComponent, GraphModule, NgxGraphStates, NgxGraphStateChangeEvent } from '@swimlane/ngx-graph';
 import { SELECTED_COLOR } from '../explorer/defaultQueries';
@@ -272,7 +273,7 @@ export class GraphExplorerComponent implements AfterViewInit, OnDestroy {
         id: this.uriToId(Math.random().toString(16).slice(2)),
         source: this.uriToId(edge.source),
         target: this.uriToId(edge.target),
-        label: ExplorerComponent.uriToLabel(edge.type)
+        label: uriToLabel(edge.type)
       };
       data.edges.push(formattedEdge);
     });
@@ -318,7 +319,7 @@ export class GraphExplorerComponent implements AfterViewInit, OnDestroy {
     Object.entries(this.gprGraph!.typeCount).forEach(kv => {
         const style = this.resolvedStyles[kv[0]];
         this.typeLegend[kv[0]] = {
-            label: style?.label ?? ExplorerComponent.uriToLabel(kv[0]),
+            label: style?.label ?? uriToLabel(kv[0]),
             color: style?.color ?? ColorGen().hexString(),
             visible: (oldTypeLegend[kv[0]] == null ? true : oldTypeLegend[kv[0]].visible),
             included: (oldTypeLegend[kv[0]] == null ? true : oldTypeLegend[kv[0]].included)

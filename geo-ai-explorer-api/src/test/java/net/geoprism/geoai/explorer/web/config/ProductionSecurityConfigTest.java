@@ -150,6 +150,28 @@ public class ProductionSecurityConfigTest
   }
 
   @Test
+  public void testLoginPageIsNotTheDestinationAfterLogin() throws Exception
+  {
+    // The login page only renders at /login, /login?error and /login?logout.
+    // Any other login URL (e.g. one the browser autocompletes or prefetches)
+    // requires authentication, but must not be remembered as the page to
+    // return to after logging in: that URL isn't mapped and would 404.
+    Browser browser = new Browser();
+    browser.perform(get("/login?error=123").accept(MediaType.TEXT_HTML));
+
+    browser.perform(get("/login"));
+
+    Matcher matcher = Pattern.compile("name=\"_csrf\"[^>]*value=\"([^\"]+)\"").matcher(browser.body);
+
+    assertTrue(matcher.find());
+
+    browser.perform(post("/login").param("username", "admin").param("password", "password").param("_csrf", matcher.group(1)));
+
+    assertEquals(302, browser.status);
+    assertEquals("/", browser.redirectedUrl);
+  }
+
+  @Test
   public void testPromptIsSentInPostBody() throws Exception
   {
     Browser browser = new Browser();
@@ -177,6 +199,8 @@ public class ProductionSecurityConfigTest
     private int                       status;
 
     private String                    body;
+
+    private String                    redirectedUrl;
 
     void login() throws Exception
     {
@@ -206,6 +230,7 @@ public class ProductionSecurityConfigTest
 
       this.status = response.getStatus();
       this.body = response.getContentAsString();
+      this.redirectedUrl = response.getRedirectedUrl();
 
       // Apply Set-Cookie headers, including deletions
       for (Cookie cookie : response.getCookies())

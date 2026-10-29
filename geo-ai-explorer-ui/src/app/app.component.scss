@@ -11,12 +11,19 @@
   min-height: 0;
 }
 
-.theme-toggle {
+.top-actions {
   /* Only shown on the chat-only views (full-screen chat / chat + results) - top-right */
   position: fixed;
   top: 1rem;
   right: 1rem;
+  /* The buttons' tooltips use a higher z-index (tooltipZIndex) so they aren't
+     drawn under a neighbouring button */
   z-index: 10000;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.top-action {
   display: inline-grid;
   place-items: center;
   width: 2.75rem;
@@ -31,19 +38,19 @@
   transition: color 150ms ease, border-color 150ms ease, background 150ms ease, transform 150ms ease;
 }
 
-.theme-toggle:hover {
+.top-action:hover {
   color: var(--primary-color);
   border-color: var(--primary-color);
   background: var(--surface-hover);
   transform: translateY(-1px);
 }
 
-.theme-toggle:focus-visible {
+.top-action:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--primary-color) 35%, transparent);
   outline-offset: 2px;
 }
 
-.theme-toggle svg {
+.top-action svg {
   width: 1.3rem;
   height: 1.3rem;
   fill: none;
