@@ -3,7 +3,7 @@
 	<parent>
     <groupId>net.geoprism.geoai.explorer</groupId>
     <artifactId>geo-ai-explorer</artifactId>
-		<version>1.0.0</version>
+		<version>1.0.1-SNAPSHOT</version>
 	</parent>
   <artifactId>geo-ai-explorer-ui</artifactId>
 	<packaging>pom</packaging>
