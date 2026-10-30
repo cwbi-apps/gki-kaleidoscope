@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025 TerraFrame
+ *
+ * Licensed under the MIT License. See the LICENSE file in the project root
+ * for full license information.
+ */
 import { AfterViewInit, Component, ElementRef, inject, Input, OnDestroy, ViewChild } from '@angular/core';
 import type { ExplorerComponent, TypeLegend } from '../explorer/explorer.component';
 import { uriToLabel } from '../util/rdf.util';

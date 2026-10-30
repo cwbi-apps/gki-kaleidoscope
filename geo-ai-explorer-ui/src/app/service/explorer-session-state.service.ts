@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025 TerraFrame
+ *
+ * Licensed under the MIT License. See the LICENSE file in the project root
+ * for full license information.
+ */
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';

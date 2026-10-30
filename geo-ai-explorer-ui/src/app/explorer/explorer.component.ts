@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025 TerraFrame
+ *
+ * Licensed under the MIT License. See the LICENSE file in the project root
+ * for full license information.
+ */
 import { Component, AfterViewInit, ElementRef, TemplateRef, ViewChild, inject, OnInit, OnDestroy } from '@angular/core';
 import { Map, NavigationControl, AttributionControl, LngLatBounds, LngLat, GeoJSONSource, LngLatBoundsLike, MapGeoJSONFeature, Source, Popup } from "maplibre-gl";
 import { CommonModule } from '@angular/common';
