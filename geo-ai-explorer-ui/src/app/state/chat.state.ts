@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025 TerraFrame
+ *
+ * Licensed under the MIT License. See the LICENSE file in the project root
+ * for full license information.
+ */
 import { v4 as uuidv4 } from 'uuid';
 import { createReducer, on, createActionGroup, props, createFeatureSelector, createSelector } from '@ngrx/store';
 import { ChatMessage } from '../models/chat.model';

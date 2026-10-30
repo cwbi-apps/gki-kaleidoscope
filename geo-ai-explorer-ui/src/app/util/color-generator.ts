@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025 TerraFrame
+ *
+ * Licensed under the MIT License. See the LICENSE file in the project root
+ * for full license information.
+ */
 /**
  * Generates visually distinct random colors by stepping the hue by the golden
  * ratio conjugate. Drop-in replacement for the unmaintained `color-generator`
